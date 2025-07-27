@@ -64,9 +64,15 @@
             <div id="admin-dashboard-page" class="hidden space-y-6">
                 <div class="card">
                     <h2 class="text-xl font-bold mb-4">1. Konfigurasi</h2>
-                    <label for="google-sheet-url" class="block text-sm font-medium text-gray-700">URL Web App Google Sheet</label>
-                    <input type="url" id="google-sheet-url" placeholder="Tempel URL dari Google Apps Script di sini" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                    <button onclick="saveConfig()" class="btn btn-primary mt-3">Simpan Konfigurasi</button>
+                    <div>
+                        <label for="google-sheet-url" class="block text-sm font-medium text-gray-700">URL Web App Google Sheet</label>
+                        <input type="url" id="google-sheet-url" placeholder="Tempel URL dari Google Apps Script di sini" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="mt-4">
+                        <label for="gemini-api-key" class="block text-sm font-medium text-gray-700">Kunci API Gemini</label>
+                        <input type="password" id="gemini-api-key" placeholder="Tempel Kunci API Gemini Anda di sini" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <button onclick="saveConfig()" class="btn btn-primary mt-4">Simpan Konfigurasi</button>
                 </div>
 
                 <div class="card">
@@ -182,6 +188,7 @@
     let appState = {
         adminPassword: "seminar-keren-2025", // Ganti password di sini
         googleSheetUrl: '',
+        geminiApiKey: '',
         quizQuestions: [],
         quizIsActive: false,
         maxTime: 180, // 3 menit dalam detik
@@ -202,6 +209,7 @@
     const adminDashboardPage = document.getElementById('admin-dashboard-page');
     const generateQuizBtn = document.getElementById('generate-quiz-btn');
     const googleSheetUrlInput = document.getElementById('google-sheet-url');
+    const geminiApiKeyInput = document.getElementById('gemini-api-key');
     const pdfUploadInput = document.getElementById('pdf-upload');
     const generationLoader = document.getElementById('generation-loader');
     const generationStatus = document.getElementById('generation-status');
@@ -280,13 +288,17 @@
 
     function saveConfig() {
         const url = googleSheetUrlInput.value;
-        if (url && url.startsWith('https://script.google.com/macros/s/')) {
+        const apiKey = geminiApiKeyInput.value;
+
+        if (url && url.startsWith('https://script.google.com/macros/s/') && apiKey) {
             appState.googleSheetUrl = url;
+            appState.geminiApiKey = apiKey;
             localStorage.setItem('googleSheetUrl', url);
+            localStorage.setItem('geminiApiKey', apiKey);
             generateQuizBtn.disabled = false;
             showAlert("Sukses", "Konfigurasi berhasil disimpan.");
         } else {
-            showAlert("Error", "URL Google Sheet tidak valid. Pastikan Anda menempelkan URL Web App yang benar.");
+            showAlert("Error", "Harap isi URL Google Sheet dan Kunci API Gemini yang valid.");
         }
     }
 
@@ -307,7 +319,7 @@
             
             const prompt = `Based on the following text from a document, create a multiple-choice quiz with exactly 5 questions. The questions should be relevant to the main topics of the text. For each question, provide 4 options (A, B, C, D), where one is the correct answer and the other three are plausible but incorrect distractors. Return the result as a JSON array of objects. Each object must have three keys: "question" (string), "options" (an array of 4 strings), and "answer" (the correct string from the options array). Do not include any explanation, just the JSON. The text is: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
             
-            const generatedQuestions = await callGeminiAPI(prompt);
+            const generatedQuestions = await callGeminiAPI(prompt, appState.geminiApiKey);
             
             appState.quizQuestions = JSON.parse(generatedQuestions);
             displayQuizForReview();
@@ -322,10 +334,10 @@
         }
     }
     
-    async function callGeminiAPI(prompt) {
-        // This is the actual Gemini API call.
-        // The API key is handled by the execution environment.
-        const apiKey = ""; 
+    async function callGeminiAPI(prompt, apiKey) {
+        if (!apiKey) {
+             throw new Error("Kunci API Gemini tidak tersedia. Harap konfigurasikan di halaman admin.");
+        }
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         const payload = {
@@ -333,7 +345,6 @@
                 parts: [{ text: prompt }]
             }],
             generationConfig: {
-                // We ask the model to respond with JSON.
                 responseMimeType: "application/json",
             }
         };
@@ -357,7 +368,6 @@
         if (result.candidates && result.candidates.length > 0 &&
             result.candidates[0].content && result.candidates[0].content.parts &&
             result.candidates[0].content.parts.length > 0) {
-            // The response from the API is a string containing JSON.
             const jsonText = result.candidates[0].content.parts[0].text;
             return jsonText;
         } else {
@@ -636,9 +646,17 @@
 
         // Load saved config
         const savedUrl = localStorage.getItem('googleSheetUrl');
+        const savedApiKey = localStorage.getItem('geminiApiKey');
+
         if (savedUrl) {
             googleSheetUrlInput.value = savedUrl;
             appState.googleSheetUrl = savedUrl;
+        }
+        if (savedApiKey) {
+            geminiApiKeyInput.value = savedApiKey;
+            appState.geminiApiKey = savedApiKey;
+        }
+        if (savedUrl && savedApiKey) {
             generateQuizBtn.disabled = false;
         }
 
