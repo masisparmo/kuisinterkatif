@@ -483,7 +483,7 @@
                         </tr>
                     </thead><tbody class="bg-white divide-y divide-gray-200">`;
                 
-                const medals = ['🥇', '🥈', '🥉'];
+                const medals = ['�', '🥈', '🥉'];
                 data.leaderboard.slice(0, 10).forEach((row, index) => {
                     tableHTML += `<tr>
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-bold">${medals[index] || index + 1}</td>
@@ -513,7 +513,6 @@
         const isActive = localStorage.getItem('quizIsActive') === 'true';
         if (isActive) {
             appState.quizIsActive = true;
-            appState.quizQuestions = JSON.parse(localStorage.getItem('quizQuestions'));
             startQuizBtn.disabled = false;
             quizNotReadyMsg.classList.add('hidden');
         } else {
@@ -525,13 +524,31 @@
 
     function handleParticipantRegistration(e) {
         e.preventDefault();
-        appState.participantData = {
-            name: document.getElementById('name').value,
-            company: document.getElementById('company').value,
-            phone: document.getElementById('phone').value,
-        };
-        if (appState.participantData.name && appState.participantData.company) {
-            startParticipantQuiz();
+        
+        // Re-check status on click to get the latest state
+        const isActive = localStorage.getItem('quizIsActive') === 'true';
+
+        if (isActive) {
+            // Validate form fields are not empty
+            const name = document.getElementById('name').value;
+            const company = document.getElementById('company').value;
+
+            if (name && company) {
+                appState.participantData = {
+                    name: name,
+                    company: company,
+                    phone: document.getElementById('phone').value,
+                };
+                // Load questions from localStorage right before starting
+                appState.quizQuestions = JSON.parse(localStorage.getItem('quizQuestions'));
+                startParticipantQuiz();
+            } else {
+                showAlert("Data Tidak Lengkap", "Harap isi Nama Lengkap dan Perusahaan/Institusi.");
+            }
+        } else {
+            // If not active, show the message again.
+            quizNotReadyMsg.classList.remove('hidden');
+            showAlert("Kuis Belum Aktif", "Mohon tunggu pembicara untuk memulai kuis.");
         }
     }
 
