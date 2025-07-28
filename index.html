@@ -440,12 +440,12 @@
         try {
             await fetch(appState.googleSheetUrl, {
                 method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Use text/plain to avoid CORS preflight
+                mode: 'no-cors', // Use no-cors to bypass browser security for simple POSTs
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Required for no-cors with Apps Script
                 body: JSON.stringify({ action: 'saveQuiz', questions: appState.quizQuestions })
             });
 
-            // Optimistically assume success because we can't read the response in no-cors mode.
+            // Since we use no-cors, we can't read the response. We proceed optimistically.
             appState.quizIsActive = true;
             quizReviewSection.classList.add('hidden');
             quizActiveSection.classList.remove('hidden');
@@ -460,7 +460,7 @@
                 size: 200
             });
 
-            showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan. Mungkin perlu beberapa detik hingga server siap.");
+            showAlert("Sukses!", "Kuis telah dikirim ke server untuk diaktifkan.");
 
         } catch (error) {
             console.error("Failed to save quiz:", error);
@@ -481,7 +481,10 @@
         }
 
         try {
-            const response = await fetch(`${appState.googleSheetUrl}?action=getLeaderboard`);
+            // PERBAIKAN: Menambahkan "cache buster" untuk memastikan data selalu baru
+            const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getLeaderboard&v=${new Date().getTime()}`;
+            const response = await fetch(urlWithCacheBuster);
+            
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             
@@ -507,12 +510,12 @@
                 tableHTML += `</tbody></table>`;
                 content.innerHTML = tableHTML;
             } else {
-                content.innerHTML = `<p class="text-center text-gray-500">Belum ada data peserta.</p>`;
+                content.innerHTML = `<p class="text-center text-gray-500">Belum ada data peserta yang masuk.</p>`;
             }
 
         } catch (error) {
             console.error("Error fetching leaderboard:", error);
-            showAlert("Error", "Gagal memuat leaderboard. Periksa koneksi dan URL Google Sheet Anda.");
+            showAlert("Error", "Gagal memuat leaderboard. Pastikan Anda sudah melakukan Re-Deploy pada Google Script.");
             content.innerHTML = `<p class="text-center text-red-500">Gagal memuat data.</p>`;
         } finally {
             loader.classList.add('hidden');
