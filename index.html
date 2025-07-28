@@ -438,13 +438,15 @@
         appState.quizQuestions = updatedQuestions;
         
         try {
-            // Send quiz to Google Apps Script to be stored centrally
             const response = await fetch(appState.googleSheetUrl, {
                 method: 'POST',
-                mode: 'no-cors', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'saveQuiz', questions: appState.quizQuestions })
             });
+
+            if (!response.ok) throw new Error('Server response was not OK.');
+            const result = await response.json();
+            if (result.result !== 'success') throw new Error(result.message || 'Failed to save quiz.');
 
             appState.quizIsActive = true;
             quizReviewSection.classList.add('hidden');
@@ -460,7 +462,7 @@
                 size: 200
             });
 
-            showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan. Peserta sekarang bisa memulai kuis.");
+            showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan.");
 
         } catch (error) {
             console.error("Failed to save quiz:", error);
@@ -535,7 +537,6 @@
         startQuizBtn.disabled = true;
 
         try {
-            // The sheetUrl is now guaranteed to be in appState if loaded via query param
             if (!appState.googleSheetUrl) {
                 showAlert("Error Konfigurasi", "URL Kuis tidak valid. Mohon pindai ulang QR Code yang benar dari pembicara.");
                 return;
@@ -640,7 +641,7 @@
 
         // Send data to Google Sheet
         const dataToSend = {
-            action: 'saveResult', // Action to differentiate from saving quiz
+            action: 'saveResult',
             timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             name: appState.participantData.name,
             company: appState.participantData.company,
@@ -655,7 +656,6 @@
 
             await fetch(appState.googleSheetUrl, {
                 method: 'POST',
-                mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dataToSend)
             });
@@ -676,13 +676,10 @@
         const scriptUrlFromQuery = urlParams.get('scriptUrl');
         
         if (scriptUrlFromQuery) {
-            // This is a participant link
             const decodedUrl = decodeURIComponent(scriptUrlFromQuery);
             appState.googleSheetUrl = decodedUrl;
-            // Also save to localStorage for this session
             localStorage.setItem('googleSheetUrl', decodedUrl);
         } else {
-            // This is likely an admin or someone who typed the URL manually
             const savedUrl = localStorage.getItem('googleSheetUrl');
             if (savedUrl) {
                 appState.googleSheetUrl = savedUrl;
