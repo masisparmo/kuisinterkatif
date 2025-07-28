@@ -295,14 +295,21 @@
     }
 
     function saveConfig() {
-        const url = googleSheetUrlInput.value;
+        let url = googleSheetUrlInput.value.trim();
         const apiKey = geminiApiKeyInput.value;
+
+        // PERBAIKAN: Membersihkan URL dari teks tambahan yang tidak sengaja tersalin
+        const execIndex = url.indexOf('/exec');
+        if (execIndex !== -1) {
+            url = url.substring(0, execIndex + 5); // 5 adalah panjang dari '/exec'
+        }
 
         if (url && url.startsWith('https://script.google.com/macros/s/') && apiKey) {
             appState.googleSheetUrl = url;
             appState.geminiApiKey = apiKey;
+            googleSheetUrlInput.value = url; // Update input field with the cleaned URL
             localStorage.setItem('googleSheetUrl', url);
-            localStorage.setItem('geminiApiKey', apiKey); // Save API key for admin's session
+            localStorage.setItem('geminiApiKey', apiKey);
             generateQuizBtn.disabled = false;
             showAlert("Sukses", "Konfigurasi berhasil disimpan.");
         } else {
