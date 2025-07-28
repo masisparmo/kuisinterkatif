@@ -97,9 +97,10 @@
                         <canvas id="qr-code"></canvas>
                     </div>
                     <p class="text-center font-mono bg-gray-100 p-2 rounded break-all" id="quiz-link"></p>
-                    <button onclick="showLeaderboard()" class="btn btn-primary w-full mt-4">Lihat Leaderboard</button>
+                    <button onclick="showDashboardAndLeaderboard()" class="btn btn-primary w-full mt-4">Lihat Leaderboard</button>
                 </div>
 
+                <!-- Leaderboard Section now part of the dashboard -->
                 <div id="leaderboard-section" class="card hidden">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold">🏆 Leaderboard</h2>
@@ -107,7 +108,7 @@
                     </div>
                     <div id="leaderboard-loader" class="hidden mx-auto loader"></div>
                     <div id="leaderboard-content" class="overflow-x-auto"></div>
-                    <button onclick="showAdminDashboard()" class="btn btn-secondary w-full mt-4">Kembali ke Dashboard</button>
+                    <button onclick="hideLeaderboard()" class="btn btn-secondary w-full mt-4">Sembunyikan Leaderboard</button>
                 </div>
             </div>
         </div>
@@ -273,9 +274,14 @@
         quizNotReadyMsg.classList.add('hidden'); // Hide message initially
     }
     
-    function showLeaderboard() {
-        showPage(leaderboardSection);
+    function showDashboardAndLeaderboard() {
+        showAdminDashboard();
+        leaderboardSection.classList.remove('hidden');
         fetchLeaderboard();
+    }
+    
+    function hideLeaderboard() {
+        leaderboardSection.classList.add('hidden');
     }
 
     // --- ADMIN FUNCTIONS ---
@@ -440,12 +446,11 @@
         try {
             await fetch(appState.googleSheetUrl, {
                 method: 'POST',
-                mode: 'no-cors', // Use no-cors to bypass browser security for simple POSTs
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Required for no-cors with Apps Script
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: 'saveQuiz', questions: appState.quizQuestions })
             });
 
-            // Since we use no-cors, we can't read the response. We proceed optimistically.
             appState.quizIsActive = true;
             quizReviewSection.classList.add('hidden');
             quizActiveSection.classList.remove('hidden');
@@ -481,7 +486,6 @@
         }
 
         try {
-            // PERBAIKAN: Menambahkan "cache buster" untuk memastikan data selalu baru
             const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getLeaderboard&v=${new Date().getTime()}`;
             const response = await fetch(urlWithCacheBuster);
             
