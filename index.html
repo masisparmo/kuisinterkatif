@@ -438,16 +438,14 @@
         appState.quizQuestions = updatedQuestions;
         
         try {
-            const response = await fetch(appState.googleSheetUrl, {
+            await fetch(appState.googleSheetUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Use text/plain to avoid CORS preflight
                 body: JSON.stringify({ action: 'saveQuiz', questions: appState.quizQuestions })
             });
 
-            if (!response.ok) throw new Error('Server response was not OK.');
-            const result = await response.json();
-            if (result.result !== 'success') throw new Error(result.message || 'Failed to save quiz.');
-
+            // Optimistically assume success because we can't read the response in no-cors mode.
             appState.quizIsActive = true;
             quizReviewSection.classList.add('hidden');
             quizActiveSection.classList.remove('hidden');
@@ -462,11 +460,11 @@
                 size: 200
             });
 
-            showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan.");
+            showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan. Mungkin perlu beberapa detik hingga server siap.");
 
         } catch (error) {
             console.error("Failed to save quiz:", error);
-            showAlert("Error", "Gagal menyimpan kuis ke server. Periksa koneksi dan URL Google Sheet Anda.");
+            showAlert("Error", "Gagal mengirim permintaan simpan kuis. Periksa koneksi Anda.");
         }
     }
     
@@ -656,7 +654,8 @@
 
             await fetch(appState.googleSheetUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(dataToSend)
             });
         } catch (error) {
