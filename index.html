@@ -486,12 +486,8 @@
         }
 
         try {
-            // PERBAIKAN: Menggunakan POST untuk mengambil data Leaderboard
-            const response = await fetch(appState.googleSheetUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'getLeaderboard' })
-            });
+            const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getLeaderboard&v=${new Date().getTime()}`;
+            const response = await fetch(urlWithCacheBuster);
             
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
@@ -551,12 +547,8 @@
                 return;
             }
 
-            // PERBAIKAN: Menggunakan POST untuk mengambil data Kuis
-            const response = await fetch(appState.googleSheetUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'getQuiz' })
-            });
+            const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getQuiz&v=${new Date().getTime()}`;
+            const response = await fetch(urlWithCacheBuster);
 
             if (!response.ok) throw new Error("Gagal menghubungi server kuis.");
             
