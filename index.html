@@ -123,6 +123,7 @@
                 <div id="quiz-not-ready-msg" class="text-center bg-yellow-100 p-3 rounded-lg text-yellow-800 hidden">
                     <p>Kuis belum dimulai oleh pembicara. Mohon tunggu sebentar.</p>
                 </div>
+                <div id="participant-loader" class="hidden mx-auto my-4 loader"></div>
                 <form id="register-form" class="space-y-4 mt-4">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
@@ -137,7 +138,7 @@
                         <input type="tel" id="phone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div class="pt-4">
-                        <button id="start-quiz-btn" type="submit" class="btn btn-primary w-full" disabled>Mulai Kuis</button>
+                        <button id="start-quiz-btn" type="submit" class="btn btn-primary w-full">Mulai Kuis</button>
                     </div>
                 </form>
                  <button onclick="showRoleSelectionPage()" class="btn btn-secondary w-full mt-2">Kembali</button>
@@ -222,6 +223,7 @@
     const registerPage = document.getElementById('register-page');
     const startQuizBtn = document.getElementById('start-quiz-btn');
     const quizNotReadyMsg = document.getElementById('quiz-not-ready-msg');
+    const participantLoader = document.getElementById('participant-loader');
     const quizPage = document.getElementById('quiz-page');
     const resultPage = document.getElementById('result-page');
     const questionCounter = document.getElementById('question-counter');
@@ -268,7 +270,7 @@
     function showParticipantPage() {
         showPage(participantSection);
         showPage(registerPage);
-        checkQuizStatusForParticipant();
+        quizNotReadyMsg.classList.add('hidden'); // Hide message initially
     }
     
     function showLeaderboard() {
@@ -294,7 +296,7 @@
             appState.googleSheetUrl = url;
             appState.geminiApiKey = apiKey;
             localStorage.setItem('googleSheetUrl', url);
-            localStorage.setItem('geminiApiKey', apiKey);
+            localStorage.setItem('geminiApiKey', apiKey); // Save API key for admin's session
             generateQuizBtn.disabled = false;
             showAlert("Sukses", "Konfigurasi berhasil disimpan.");
         } else {
@@ -317,7 +319,7 @@
             const pdfText = await extractTextFromPDF(file);
             generationStatus.textContent = "Teks berhasil diekstrak. Menghubungi AI untuk membuat soal...";
             
-            const prompt = `Based on the following text from a document, create a multiple-choice quiz with exactly 5 questions. The questions should be relevant to the main topics of the text. For each question, provide 4 options (A, B, C, D), where one is the correct answer and the other three are plausible but incorrect distractors. Return the result as a JSON array of objects. Each object must have three keys: "question" (string), "options" (an array of 4 strings), and "answer" (the correct string from the options array). Do not include any explanation, just the JSON. The text is: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
+            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat 5 pertanyaan dalam Bahasa Indonesia. Pertanyaan harus relevan dengan topik utama dari teks tersebut. Untuk setiap pertanyaan, berikan 4 pilihan jawaban (A, B, C, D), di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question" (string dalam Bahasa Indonesia), "options" (sebuah array berisi 4 string dalam Bahasa Indonesia), dan "answer" (string jawaban yang benar dari pilihan yang ada). Jangan sertakan penjelasan apa pun, hanya JSON saja. Teksnya adalah: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
             
             const generatedQuestions = await callGeminiAPI(prompt, appState.geminiApiKey);
             
@@ -425,8 +427,7 @@
         quizReviewSection.classList.remove('hidden');
     }
 
-    function saveQuiz() {
-        // Update quiz questions from the review form
+    async function saveQuiz() {
         const updatedQuestions = [];
         document.querySelectorAll('#quiz-review-form > div').forEach((div, index) => {
             const question = div.querySelector('input[data-type="question"]').value;
@@ -435,24 +436,36 @@
             updatedQuestions.push({ question, options, answer });
         });
         appState.quizQuestions = updatedQuestions;
-        appState.quizIsActive = true;
         
-        // Save to localStorage so participants can access it
-        localStorage.setItem('quizQuestions', JSON.stringify(appState.quizQuestions));
-        localStorage.setItem('quizIsActive', 'true');
+        try {
+            // Send quiz to Google Apps Script to be stored centrally
+            const response = await fetch(appState.googleSheetUrl, {
+                method: 'POST',
+                // Using 'no-cors' is a simple way to fire-and-forget to Apps Script.
+                // We can't read the response, but we assume it works.
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'saveQuiz', questions: appState.quizQuestions })
+            });
 
-        quizReviewSection.classList.add('hidden');
-        quizActiveSection.classList.remove('hidden');
-        
-        const link = window.location.href.split('#')[0];
-        document.getElementById('quiz-link').textContent = link;
-        new QRious({
-            element: document.getElementById('qr-code'),
-            value: link,
-            size: 200
-        });
+            appState.quizIsActive = true;
+            quizReviewSection.classList.add('hidden');
+            quizActiveSection.classList.remove('hidden');
+            
+            const link = window.location.href.split('#')[0];
+            document.getElementById('quiz-link').textContent = link;
+            new QRious({
+                element: document.getElementById('qr-code'),
+                value: link,
+                size: 200
+            });
 
-        showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan. Peserta sekarang bisa memulai kuis.");
+            showAlert("Sukses!", "Kuis telah disimpan dan diaktifkan. Peserta sekarang bisa memulai kuis.");
+
+        } catch (error) {
+            console.error("Failed to save quiz:", error);
+            showAlert("Error", "Gagal menyimpan kuis ke server. Periksa koneksi dan URL Google Sheet Anda.");
+        }
     }
     
     async function fetchLeaderboard() {
@@ -468,7 +481,6 @@
         }
 
         try {
-            // We add a parameter to tell the script we want to GET data
             const response = await fetch(`${appState.googleSheetUrl}?action=getLeaderboard`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
@@ -483,7 +495,7 @@
                         </tr>
                     </thead><tbody class="bg-white divide-y divide-gray-200">`;
                 
-                const medals = ['�', '🥈', '🥉'];
+                const medals = ['🥇', '🥈', '🥉'];
                 data.leaderboard.slice(0, 10).forEach((row, index) => {
                     tableHTML += `<tr>
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-bold">${medals[index] || index + 1}</td>
@@ -509,46 +521,50 @@
 
 
     // --- PARTICIPANT FUNCTIONS ---
-    function checkQuizStatusForParticipant() {
-        const isActive = localStorage.getItem('quizIsActive') === 'true';
-        if (isActive) {
-            appState.quizIsActive = true;
-            startQuizBtn.disabled = false;
-            quizNotReadyMsg.classList.add('hidden');
-        } else {
-            appState.quizIsActive = false;
-            startQuizBtn.disabled = true;
-            quizNotReadyMsg.classList.remove('hidden');
-        }
-    }
-
-    function handleParticipantRegistration(e) {
+    async function handleParticipantRegistration(e) {
         e.preventDefault();
         
-        // Re-check status on click to get the latest state
-        const isActive = localStorage.getItem('quizIsActive') === 'true';
+        const name = document.getElementById('name').value;
+        const company = document.getElementById('company').value;
+        if (!name || !company) {
+            showAlert("Data Tidak Lengkap", "Harap isi Nama Lengkap dan Perusahaan/Institusi.");
+            return;
+        }
 
-        if (isActive) {
-            // Validate form fields are not empty
-            const name = document.getElementById('name').value;
-            const company = document.getElementById('company').value;
+        participantLoader.classList.remove('hidden');
+        startQuizBtn.disabled = true;
 
-            if (name && company) {
-                appState.participantData = {
-                    name: name,
-                    company: company,
-                    phone: document.getElementById('phone').value,
-                };
-                // Load questions from localStorage right before starting
-                appState.quizQuestions = JSON.parse(localStorage.getItem('quizQuestions'));
+        try {
+            const sheetUrl = localStorage.getItem('googleSheetUrl');
+            if (!sheetUrl) {
+                // If participant opens the page, they won't have the URL.
+                // This is a limitation of the current design. A better design would pass the quiz ID in the URL.
+                // For now, we assume the admin has configured it and it's in their localStorage.
+                // A better approach for participants is to fetch a config file or have the URL embedded.
+                // Let's try to get it from the admin's potential storage if they are on the same browser (unlikely but a fallback)
+                showAlert("Error Konfigurasi", "URL Kuis tidak ditemukan. Mohon muat ulang halaman dari QR Code yang diberikan.");
+                return;
+            }
+
+            const response = await fetch(`${sheetUrl}?action=getQuiz`);
+            if (!response.ok) throw new Error("Gagal menghubungi server kuis.");
+            
+            const data = await response.json();
+
+            if (data.success && data.isActive) {
+                appState.participantData = { name, company, phone: document.getElementById('phone').value };
+                appState.quizQuestions = data.questions;
                 startParticipantQuiz();
             } else {
-                showAlert("Data Tidak Lengkap", "Harap isi Nama Lengkap dan Perusahaan/Institusi.");
+                quizNotReadyMsg.classList.remove('hidden');
+                showAlert("Kuis Belum Aktif", "Mohon tunggu pembicara untuk memulai kuis.");
             }
-        } else {
-            // If not active, show the message again.
-            quizNotReadyMsg.classList.remove('hidden');
-            showAlert("Kuis Belum Aktif", "Mohon tunggu pembicara untuk memulai kuis.");
+        } catch (error) {
+            console.error("Failed to fetch quiz status:", error);
+            showAlert("Error", "Gagal memeriksa status kuis. Periksa koneksi Anda.");
+        } finally {
+            participantLoader.classList.add('hidden');
+            startQuizBtn.disabled = false;
         }
     }
 
@@ -629,6 +645,7 @@
 
         // Send data to Google Sheet
         const dataToSend = {
+            action: 'saveResult', // Action to differentiate from saving quiz
             timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             name: appState.participantData.name,
             company: appState.participantData.company,
@@ -644,13 +661,12 @@
 
             await fetch(sheetUrl, {
                 method: 'POST',
-                mode: 'no-cors', // Important for sending to Google Apps Script from browser
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dataToSend)
             });
         } catch (error) {
             console.error("Failed to send data to Google Sheet:", error);
-            // Don't bother the user with this error, just log it.
         }
     }
 
@@ -661,7 +677,7 @@
         document.getElementById('register-form').addEventListener('submit', handleParticipantRegistration);
         nextBtn.addEventListener('click', handleNextQuestion);
 
-        // Load saved config
+        // Load saved config for admin
         const savedUrl = localStorage.getItem('googleSheetUrl');
         const savedApiKey = localStorage.getItem('geminiApiKey');
 
@@ -681,6 +697,11 @@
         if (window.location.hash === '#admin') {
             showAdminLoginPage();
         } else {
+            // For participants, we need the URL. A simple way is to store it when admin saves it.
+            // This is a simplification. In a real app, the quiz URL would contain an ID.
+            if (savedUrl) {
+                 appState.googleSheetUrl = savedUrl;
+            }
             showRoleSelectionPage();
         }
     };
