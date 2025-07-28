@@ -77,6 +77,17 @@
 
                 <div class="card">
                     <h2 class="text-xl font-bold mb-4">2. Buat Kuis dari PDF</h2>
+                    <div class="mb-4">
+                        <label for="question-count" class="block text-sm font-medium text-gray-700">Jumlah Soal</label>
+                        <select id="question-count" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="5">5 Soal</option>
+                            <option value="10">10 Soal</option>
+                            <option value="15">15 Soal</option>
+                            <option value="20">20 Soal</option>
+                            <option value="custom">Jumlah Lainnya...</option>
+                        </select>
+                        <input type="number" id="custom-question-count" class="mt-2 hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Masukkan jumlah soal" min="1" max="50">
+                    </div>
                     <p class="text-sm text-gray-500 mb-3">Unggah e-book (PDF). AI akan membuatkan soal berdasarkan isinya.</p>
                     <input type="file" id="pdf-upload" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     <button id="generate-quiz-btn" onclick="generateQuizFromPDF()" class="btn btn-primary w-full mt-4" disabled>Buat Soal dengan AI</button>
@@ -161,26 +172,27 @@
             </div>
 
             <!-- Halaman Hasil -->
-            <div id="result-page" class="card hidden text-center">
-                <svg class="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h1 class="text-2xl font-bold text-gray-800 mt-4">Kuis Selesai!</h1>
-                <p class="text-gray-600 mt-2">Terima kasih telah berpartisipasi.</p>
-                <div class="mt-6 bg-indigo-50 p-4 rounded-lg">
-                    <div class="flex justify-around">
-                        <div>
-                            <p class="text-sm text-gray-500">Jawaban Benar</p>
-                            <p id="final-score" class="text-2xl font-bold text-indigo-600">0 / 5</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Waktu</p>
-                            <p id="final-time" class="text-2xl font-bold text-indigo-600">00:00</p>
-                        </div>
+            <div id="result-page" class="card hidden">
+                <div class="text-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Hasil Kuis Anda</h1>
+                    <p class="text-gray-600 mt-2">Terima kasih telah berpartisipasi!</p>
+                </div>
+
+                <div class="mt-6 bg-slate-50 p-4 rounded-lg space-y-2">
+                    <div class="flex justify-between"><span class="font-semibold">Nama:</span> <span id="result-name"></span></div>
+                    <div class="flex justify-between"><span class="font-semibold">Perusahaan:</span> <span id="result-company"></span></div>
+                    <div class="flex justify-between"><span class="font-semibold">Durasi:</span> <span id="result-time"></span></div>
+                    <div class="flex justify-between text-lg"><span class="font-bold">Skor Akhir:</span> <span id="result-score" class="font-bold text-indigo-600"></span></div>
+                </div>
+
+                <div class="mt-6">
+                    <h2 class="text-xl font-bold text-center mb-4">Tinjauan Jawaban</h2>
+                    <div id="quiz-review-details" class="space-y-4">
+                        <!-- Detail jawaban akan di-generate oleh JavaScript -->
                     </div>
                 </div>
-                <p class="text-sm text-gray-500 mt-6">Pemenang akan diumumkan di layar utama. Semoga beruntung!</p>
-                <button onclick="showRoleSelectionPage()" class="btn btn-secondary w-full mt-4">Selesai</button>
+
+                <button onclick="showRoleSelectionPage()" class="btn btn-secondary w-full mt-8">Selesai</button>
             </div>
         </div>
     </div>
@@ -213,6 +225,8 @@
     const googleSheetUrlInput = document.getElementById('google-sheet-url');
     const geminiApiKeyInput = document.getElementById('gemini-api-key');
     const pdfUploadInput = document.getElementById('pdf-upload');
+    const questionCountSelect = document.getElementById('question-count');
+    const customQuestionCountInput = document.getElementById('custom-question-count');
     const generationLoader = document.getElementById('generation-loader');
     const generationStatus = document.getElementById('generation-status');
     const quizReviewSection = document.getElementById('quiz-review-section');
@@ -232,6 +246,13 @@
     const questionText = document.getElementById('question-text');
     const optionsContainer = document.getElementById('options-container');
     const nextBtn = document.getElementById('next-btn');
+    // Result Page
+    const resultName = document.getElementById('result-name');
+    const resultCompany = document.getElementById('result-company');
+    const resultTime = document.getElementById('result-time');
+    const resultScore = document.getElementById('result-score');
+    const quizReviewDetails = document.getElementById('quiz-review-details');
+
 
     // --- UTILITY & PAGE NAVIGATION ---
     function showAlert(title, message) {
@@ -298,16 +319,15 @@
         let url = googleSheetUrlInput.value.trim();
         const apiKey = geminiApiKeyInput.value;
 
-        // PERBAIKAN: Membersihkan URL dari teks tambahan yang tidak sengaja tersalin
         const execIndex = url.indexOf('/exec');
         if (execIndex !== -1) {
-            url = url.substring(0, execIndex + 5); // 5 adalah panjang dari '/exec'
+            url = url.substring(0, execIndex + 5);
         }
 
         if (url && url.startsWith('https://script.google.com/macros/s/') && apiKey) {
             appState.googleSheetUrl = url;
             appState.geminiApiKey = apiKey;
-            googleSheetUrlInput.value = url; // Update input field with the cleaned URL
+            googleSheetUrlInput.value = url;
             localStorage.setItem('googleSheetUrl', url);
             localStorage.setItem('geminiApiKey', apiKey);
             generateQuizBtn.disabled = false;
@@ -324,6 +344,15 @@
             return;
         }
 
+        let numQuestions = questionCountSelect.value;
+        if (numQuestions === 'custom') {
+            numQuestions = customQuestionCountInput.value;
+        }
+        if (!numQuestions || numQuestions < 1) {
+            showAlert("Error", "Jumlah soal tidak valid.");
+            return;
+        }
+
         generationLoader.classList.remove('hidden');
         generationStatus.textContent = "Mengekstrak teks dari PDF...";
         generateQuizBtn.disabled = true;
@@ -332,7 +361,7 @@
             const pdfText = await extractTextFromPDF(file);
             generationStatus.textContent = "Teks berhasil diekstrak. Menghubungi AI untuk membuat soal...";
             
-            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat 5 pertanyaan dalam Bahasa Indonesia. Pertanyaan harus relevan dengan topik utama dari teks tersebut. Untuk setiap pertanyaan, berikan 4 pilihan jawaban (A, B, C, D), di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question" (string dalam Bahasa Indonesia), "options" (sebuah array berisi 4 string dalam Bahasa Indonesia), dan "answer" (string jawaban yang benar dari pilihan yang ada). Jangan sertakan penjelasan apa pun, hanya JSON saja. Teksnya adalah: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
+            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat ${numQuestions} pertanyaan dalam Bahasa Indonesia. Buat variasi tingkat kesulitan soal dari yang mudah hingga tingkat lanjut. Pertanyaan harus fokus pada inti dan konsep dari konten, BUKAN tentang metadata seperti nama pengarang, tahun terbit, atau edisi buku. Untuk setiap pertanyaan, berikan 4 pilihan jawaban, di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question" (string dalam Bahasa Indonesia), "options" (sebuah array berisi 4 string dalam Bahasa Indonesia), dan "answer" (string jawaban yang benar dari pilihan yang ada). Jangan sertakan penjelasan apa pun, hanya JSON saja. Teksnya adalah: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
             
             const generatedQuestions = await callGeminiAPI(prompt, appState.geminiApiKey);
             
@@ -650,8 +679,31 @@
 
         // Display results
         showPage(resultPage);
-        document.getElementById('final-score').textContent = `${correctAnswers} / ${appState.quizQuestions.length}`;
-        document.getElementById('final-time').textContent = timerEl.textContent.replace('Waktu: ', '');
+        resultName.textContent = appState.participantData.name;
+        resultCompany.textContent = appState.participantData.company;
+        resultTime.textContent = timerEl.textContent.replace('Waktu: ', '');
+        resultScore.textContent = finalScore.toFixed(2);
+
+        // Display detailed review
+        quizReviewDetails.innerHTML = '';
+        appState.quizQuestions.forEach((q, index) => {
+            const userAnswer = appState.userAnswers[index];
+            const isCorrect = userAnswer === q.answer;
+            const reviewItem = document.createElement('div');
+            reviewItem.className = `p-3 rounded-lg border ${isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`;
+            
+            let answerHtml = `<p class="mt-2 text-sm">Jawaban Anda: <span class="font-semibold">${userAnswer}</span> <span class="${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? '✔ Benar' : '✖ Salah'}</span></p>`;
+            if (!isCorrect) {
+                answerHtml += `<p class="text-sm">Jawaban yang Benar: <span class="font-semibold text-green-700">${q.answer}</span></p>`;
+            }
+
+            reviewItem.innerHTML = `
+                <p class="font-semibold text-gray-800">${index + 1}. ${q.question}</p>
+                ${answerHtml}
+            `;
+            quizReviewDetails.appendChild(reviewItem);
+        });
+
 
         // Send data to Google Sheet
         const dataToSend = {
@@ -685,6 +737,13 @@
         // Event Listeners
         document.getElementById('register-form').addEventListener('submit', handleParticipantRegistration);
         nextBtn.addEventListener('click', handleNextQuestion);
+        questionCountSelect.addEventListener('change', () => {
+            if (questionCountSelect.value === 'custom') {
+                customQuestionCountInput.classList.remove('hidden');
+            } else {
+                customQuestionCountInput.classList.add('hidden');
+            }
+        });
 
         // --- URL and Config Handling ---
         const urlParams = new URLSearchParams(window.location.search);
