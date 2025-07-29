@@ -16,14 +16,17 @@
         .btn-primary:hover { background-color: #4338ca; }
         .btn-secondary { background-color: #6b7280; }
         .btn-secondary:hover { background-color: #4b5563; }
+        .btn-info { background-color: #3b82f6; }
+        .btn-info:hover { background-color: #2563eb; }
         .btn:disabled { background-color: #d1d5db; cursor: not-allowed; }
         .quiz-option { border: 1px solid #e5e7eb; cursor: pointer; }
         .quiz-option:hover { background-color: #f3f4f6; border-color: #4f46e5; }
         .quiz-option.selected { background-color: #e0e7ff; border-color: #4f46e5; color: #3730a3; }
         .loader { border: 4px solid #f3f4f6; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 50; }
-        .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 60; }
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 50; display: flex; justify-content: center; align-items: center; }
+        .modal-content { z-index: 60; max-height: 90vh; overflow-y: auto; }
+        .code-block { background-color: #1f2937; color: #d1d5db; padding: 1rem; border-radius: 0.5rem; font-family: 'Courier New', Courier, monospace; font-size: 0.875rem; white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -41,13 +44,67 @@
         </div>
         
         <!-- ===== MODAL ALERT ===== -->
-        <div id="alert-modal" class="modal-backdrop hidden justify-center items-center">
+        <div id="alert-modal" class="modal-backdrop hidden">
             <div class="modal-content card w-11/12 max-w-sm text-center">
                 <h3 id="alert-title" class="text-lg font-bold text-gray-800">Pemberitahuan</h3>
                 <p id="alert-message" class="text-gray-600 my-4">Ini adalah pesan alert.</p>
                 <button onclick="closeAlert()" class="btn btn-primary mx-auto">Tutup</button>
             </div>
         </div>
+        
+        <!-- ===== MODAL BANTUAN ===== -->
+        <div id="help-modal" class="modal-backdrop hidden">
+            <div class="modal-content card w-11/12 max-w-3xl">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Tutorial Konfigurasi</h2>
+                <div class="space-y-6 text-sm text-gray-700">
+                    
+                    <!-- Google Sheet Section -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">1. URL Web App Google Sheet</h3>
+                        <ol class="list-decimal list-inside space-y-2 mt-2">
+                            <li>Buka <a href="https://sheets.new" target="_blank" class="text-indigo-600 hover:underline">Google Sheets</a> dan buat spreadsheet baru. Beri nama, misalnya "Database Kuis".</li>
+                            <li>Buka <strong>Ekstensi > Apps Script</strong>.</li>
+                            <li>Hapus semua kode contoh di `Code.gs` dan tempel kode di bawah ini.</li>
+                            <div class="relative my-2">
+                                <pre id="google-script-code" class="code-block"></pre>
+                                <button onclick="copyGoogleScript()" class="absolute top-2 right-2 btn btn-secondary text-xs px-2 py-1">Salin Kode</button>
+                            </div>
+                            <li>Klik ikon <strong>Simpan Proyek</strong>.</li>
+                            <li>Klik tombol biru <strong>Deploy > Deployment baru</strong>.</li>
+                            <li>Klik ikon gerigi di sebelah "Pilih Jenis", lalu pilih <strong>Aplikasi Web</strong>.</li>
+                            <li>Pada "Siapa yang memiliki akses", pilih <strong>Siapa saja</strong>.</li>
+                            <li>Klik <strong>Deploy</strong>. Berikan izin yang diperlukan oleh Google.</li>
+                            <li>Salin <strong>URL Aplikasi Web</strong> yang ditampilkan dan tempel di kolom konfigurasi.</li>
+                        </ol>
+                    </div>
+
+                    <!-- Gemini API Key Section -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">2. Kunci API Gemini</h3>
+                        <ol class="list-decimal list-inside space-y-2 mt-2">
+                            <li>Buka <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-600 hover:underline">Google AI Studio</a>.</li>
+                            <li>Klik <strong>"Create API key in new project"</strong>.</li>
+                            <li>Salin kunci API yang muncul dan tempel di kolom konfigurasi.</li>
+                            <li class="text-xs text-red-600">Penting: Jaga kerahasiaan Kunci API Anda.</li>
+                        </ol>
+                    </div>
+
+                    <!-- Bitly Token Section -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">3. Bitly Access Token (Opsional)</h3>
+                        <ol class="list-decimal list-inside space-y-2 mt-2">
+                            <li>Login ke akun <a href="https://bitly.com/" target="_blank" class="text-indigo-600 hover:underline">Bitly</a> Anda.</li>
+                            <li>Masuk ke <strong>Settings > API</strong>.</li>
+                            <li>Di bawah "Access tokens", klik <strong>"Generate token"</strong>.</li>
+                            <li>Salin token yang muncul dan tempel di kolom konfigurasi. Ini akan membuat link kuis menjadi lebih pendek.</li>
+                        </ol>
+                    </div>
+
+                </div>
+                <button onclick="closeHelpModal()" class="btn btn-primary mx-auto mt-6">Tutup</button>
+            </div>
+        </div>
+
 
         <!-- ===== BAGIAN ADMIN ===== -->
         <div id="admin-section" class="hidden w-full space-y-6">
@@ -63,7 +120,10 @@
             <!-- Halaman Dashboard Admin -->
             <div id="admin-dashboard-page" class="hidden space-y-6">
                 <div class="card">
-                    <h2 class="text-xl font-bold mb-4">1. Konfigurasi</h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">1. Konfigurasi</h2>
+                        <button onclick="showHelpModal()" class="btn btn-info text-sm px-3 py-1">Bantuan</button>
+                    </div>
                     <div>
                         <label for="google-sheet-url" class="block text-sm font-medium text-gray-700">URL Web App Google Sheet</label>
                         <input type="url" id="google-sheet-url" placeholder="Tempel URL dari Google Apps Script di sini" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
@@ -174,7 +234,7 @@
             <div id="quiz-page" class="card hidden">
                 <div class="flex justify-between items-center mb-4">
                     <div id="question-counter" class="text-sm font-semibold text-indigo-600">Soal 1 / 5</div>
-                    <div id="timer" class="text-sm font-bold text-gray-800 bg-gray-200 px-3 py-1 rounded-full">Waktu: 00:00</div>
+                    <div id="timer" class="text-sm font-bold text-gray-800 bg-gray-200 px-3 py-1 rounded-full">Sisa Waktu: 00:00</div>
                 </div>
                 <div class="mb-6">
                     <h2 id="question-text" class="text-lg font-semibold text-gray-900 text-center"></h2>
@@ -198,6 +258,8 @@
                     <div class="flex justify-between"><span class="font-semibold">Durasi:</span> <span id="result-time"></span></div>
                     <div class="flex justify-between text-lg"><span class="font-bold">Skor Akhir:</span> <span id="result-score" class="font-bold text-indigo-600"></span></div>
                 </div>
+
+                <div id="result-calculation-details" class="mt-6"></div>
 
                 <div class="mt-6">
                     <h2 class="text-xl font-bold text-center mb-4">Tinjauan Jawaban</h2>
@@ -270,6 +332,9 @@
     const resultTime = document.getElementById('result-time');
     const resultScore = document.getElementById('result-score');
     const quizReviewDetails = document.getElementById('quiz-review-details');
+    const resultCalculationDetails = document.getElementById('result-calculation-details');
+    // Modals
+    const helpModal = document.getElementById('help-modal');
 
 
     // --- UTILITY & PAGE NAVIGATION ---
@@ -277,12 +342,10 @@
         document.getElementById('alert-title').textContent = title;
         document.getElementById('alert-message').textContent = message;
         document.getElementById('alert-modal').classList.remove('hidden');
-        document.getElementById('alert-modal').classList.add('flex');
     }
 
     function closeAlert() {
         document.getElementById('alert-modal').classList.add('hidden');
-        document.getElementById('alert-modal').classList.remove('flex');
     }
 
     function showPage(pageElement) {
@@ -321,6 +384,25 @@
     
     function hideLeaderboard() {
         leaderboardSection.classList.add('hidden');
+    }
+
+    // --- MODAL FUNCTIONS ---
+    function showHelpModal() {
+        helpModal.classList.remove('hidden');
+    }
+
+    function closeHelpModal() {
+        helpModal.classList.add('hidden');
+    }
+
+    function copyGoogleScript() {
+        const scriptText = document.getElementById('google-script-code').textContent;
+        navigator.clipboard.writeText(scriptText).then(() => {
+            showAlert("Berhasil", "Kode Apps Script berhasil disalin!");
+        }, (err) => {
+            console.error('Could not copy text: ', err);
+            showAlert("Gagal", "Tidak dapat menyalin kode. Silakan salin secara manual.");
+        });
     }
 
     // --- ADMIN FUNCTIONS ---
@@ -611,7 +693,7 @@
                         </tr>
                     </thead><tbody class="bg-white divide-y divide-gray-200">`;
                 
-                const medals = ['🥇', '🥈', '🥉'];
+                const medals = ['�', '🥈', '🥉'];
                 data.leaderboard.slice(0, 10).forEach((row, index) => {
                     tableHTML += `<tr>
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-bold">${medals[index] || index + 1}</td>
@@ -623,6 +705,17 @@
                 
                 tableHTML += `</tbody></table>`;
                 content.innerHTML = tableHTML;
+
+                const formulaHTML = `<div class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-700">
+                    <h4 class="font-bold mb-2">Rumus Skor Akhir</h4>
+                    <p class="font-mono text-xs bg-gray-200 p-2 rounded">Skor Akhir = (Skor Jawaban * 0.75) + (Skor Waktu * 0.25)</p>
+                    <ul class="list-disc list-inside mt-2 space-y-1 text-xs">
+                        <li><b>Skor Jawaban:</b> (Jumlah Benar / Total Soal) * 100</li>
+                        <li><b>Skor Waktu:</b> ((Waktu Maksimal - Waktu Pengerjaan) / Waktu Maksimal) * 100</li>
+                    </ul>
+                </div>`;
+                content.innerHTML += formulaHTML;
+
             } else {
                 content.innerHTML = `<p class="text-center text-gray-500">Belum ada data peserta yang masuk.</p>`;
             }
@@ -687,16 +780,38 @@
         appState.quizSeconds = 0;
         appState.currentQuestionIndex = 0;
         appState.userAnswers = [];
+
+        // Set initial timer display for countdown
+        const initialMin = Math.floor(appState.maxTime / 60).toString().padStart(2, '0');
+        const initialSec = (appState.maxTime % 60).toString().padStart(2, '0');
+        timerEl.textContent = `Sisa Waktu: ${initialMin}:${initialSec}`;
+
         startQuizTimer();
         showNextQuestion();
     }
 
     function startQuizTimer() {
+        // Clear any existing timer
+        if(appState.quizTimer) clearInterval(appState.quizTimer);
+
         appState.quizTimer = setInterval(() => {
-            appState.quizSeconds++;
-            const min = Math.floor(appState.quizSeconds / 60).toString().padStart(2, '0');
-            const sec = (appState.quizSeconds % 60).toString().padStart(2, '0');
-            timerEl.textContent = `Waktu: ${min}:${sec}`;
+            appState.quizSeconds++; // This still counts up to track total time taken
+            
+            const remainingSeconds = appState.maxTime - appState.quizSeconds;
+
+            if (remainingSeconds <= 0) {
+                timerEl.textContent = 'Waktu Habis!';
+                clearInterval(appState.quizTimer);
+                // Check if quiz hasn't been finished yet to avoid double submission
+                if (resultPage.classList.contains('hidden')) {
+                    finishQuiz();
+                }
+                return;
+            }
+
+            const min = Math.floor(remainingSeconds / 60).toString().padStart(2, '0');
+            const sec = (remainingSeconds % 60).toString().padStart(2, '0');
+            timerEl.textContent = `Sisa Waktu: ${min}:${sec}`;
         }, 1000);
     }
 
@@ -739,6 +854,11 @@
     }
 
     async function finishQuiz() {
+        // Ensure this function only runs once
+        if (!resultPage.classList.contains('hidden')) {
+            return; 
+        }
+
         clearInterval(appState.quizTimer);
         let correctAnswers = 0;
         appState.userAnswers.forEach((answer, index) => {
@@ -757,8 +877,30 @@
         showPage(resultPage);
         resultName.textContent = appState.participantData.name;
         resultCompany.textContent = appState.participantData.company;
-        resultTime.textContent = timerEl.textContent.replace('Waktu: ', '');
+        
+        const timeTakenMin = Math.floor(timeTaken / 60).toString().padStart(2, '0');
+        const timeTakenSec = (timeTaken % 60).toString().padStart(2, '0');
+        resultTime.textContent = `${timeTakenMin}:${timeTakenSec}`;
+        
         resultScore.textContent = finalScore.toFixed(2);
+        
+        // Display detailed score calculation
+        resultCalculationDetails.innerHTML = `
+            <h3 class="text-xl font-bold text-center mb-2">Detail Perhitungan Skor</h3>
+            <div class="p-4 bg-gray-50 rounded-lg text-sm text-gray-700 space-y-3">
+                <div>
+                    <p><strong>Rumus:</strong> (Skor Jawaban × 75%) + (Skor Waktu × 25%)</p>
+                </div>
+                <div class="border-t pt-3">
+                    <p><strong>Skor Jawaban:</strong> (${correctAnswers} / ${appState.quizQuestions.length}) × 100 = <strong>${scoreJawaban.toFixed(2)}</strong></p>
+                    <p><strong>Skor Waktu:</strong> ((${totalQuizTime} - ${timeTaken}) / ${totalQuizTime}) × 100 = <strong>${Math.max(0, scoreWaktu).toFixed(2)}</strong></p>
+                </div>
+                <div class="border-t pt-3">
+                    <p class="font-bold">Perhitungan Final Anda:</p>
+                    <p class="font-mono text-xs bg-gray-200 p-2 rounded">(${scoreJawaban.toFixed(2)} × 0.75) + (${Math.max(0, scoreWaktu).toFixed(2)} × 0.25) = ${finalScore.toFixed(2)}</p>
+                </div>
+            </div>
+        `;
 
         // Display detailed review
         quizReviewDetails.innerHTML = '';
@@ -768,7 +910,7 @@
             const reviewItem = document.createElement('div');
             reviewItem.className = `p-3 rounded-lg border ${isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`;
             
-            let answerHtml = `<p class="mt-2 text-sm">Jawaban Anda: <span class="font-semibold">${userAnswer}</span> <span class="${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? '✔ Benar' : '✖ Salah'}</span></p>`;
+            let answerHtml = `<p class="mt-2 text-sm">Jawaban Anda: <span class="font-semibold">${userAnswer || 'Tidak dijawab'}</span> <span class="${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? '✔ Benar' : '✖ Salah'}</span></p>`;
             if (!isCorrect) {
                 answerHtml += `<p class="text-sm">Jawaban yang Benar: <span class="font-semibold text-green-700">${q.answer}</span></p>`;
             }
@@ -809,7 +951,89 @@
 
 
     // --- INITIALIZATION ---
+    const googleAppsScriptCode = `
+const SHEET_NAME = "Hasil Kuis";
+const SCRIPT_PROP = PropertiesService.getScriptProperties();
+
+function doGet(e) {
+  const action = e.parameter.action;
+  
+  if (action == 'getQuiz') {
+    const props = SCRIPT_PROP.getProperties();
+    const questions = JSON.parse(props.questions || '[]');
+    const maxTime = props.maxTime || 300;
+    return ContentService.createTextOutput(JSON.stringify({ success: true, isActive: questions.length > 0, questions: questions, maxTime: maxTime })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action == 'getLeaderboard') {
+    try {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, leaderboard: [] })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const data = sheet.getDataRange().getValues();
+      const headers = data.shift();
+      
+      const nameIndex = headers.indexOf("Nama");
+      const companyIndex = headers.indexOf("Perusahaan/Institusi");
+      const scoreIndex = headers.indexOf("Skor Akhir");
+      
+      const leaderboard = data.map(row => ({
+        nama: row[nameIndex],
+        company: row[companyIndex],
+        skorAkhir: parseFloat(row[scoreIndex])
+      })).sort((a, b) => b.skorAkhir - a.skorAkhir);
+      
+      return ContentService.createTextOutput(JSON.stringify({ success: true, leaderboard: leaderboard })).setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.message })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Invalid action" })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    
+    if (data.action === 'saveQuiz') {
+      SCRIPT_PROP.setProperty("questions", JSON.stringify(data.questions || []));
+      SCRIPT_PROP.setProperty("maxTime", data.maxTime || 300);
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Quiz saved" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (data.action === 'saveResult') {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME) || SpreadsheetApp.getActiveSpreadsheet().insertSheet(SHEET_NAME);
+      const headers = ["Timestamp", "Nama", "Perusahaan/Institusi", "No. WhatsApp", "Jawaban Benar", "Waktu (detik)", "Skor Akhir"];
+      if (sheet.getLastRow() === 0) {
+        sheet.appendRow(headers);
+      }
+      const newRow = [
+        data.timestamp,
+        data.name,
+        data.company,
+        data.phone,
+        data.correctAnswers,
+        data.timeTaken,
+        data.finalScore
+      ];
+      sheet.appendRow(newRow);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    throw new Error("Invalid action specified in doPost");
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+`;
+
     window.onload = () => {
+        // Populate Google Script Code Block
+        document.getElementById('google-script-code').textContent = googleAppsScriptCode.trim();
+
         // Event Listeners
         document.getElementById('register-form').addEventListener('submit', handleParticipantRegistration);
         nextBtn.addEventListener('click', handleNextQuestion);
