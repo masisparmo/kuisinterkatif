@@ -8,6 +8,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- KaTeX for LaTeX Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" xintegrity="sha384-n8MVd4RsNIU0KOVEMckDpbOc7ymOqrASbfYALEck+CO5GHiNM8MpqscVfW1VaKa" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" xintegrity="sha384-XjKyOOlVwcpaN8sdkXHAtrNc/G8OspllD/iSXlwKa4ImLAL94iVqc9euGcwFqA" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" xintegrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; }
         .card { background-color: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); transition: all 0.3s ease-in-out; }
@@ -62,7 +68,7 @@
                     <div>
                         <h3 class="text-lg font-semibold text-gray-800">1. URL Web App Google Sheet</h3>
                         <ol class="list-decimal list-inside space-y-2 mt-2">
-                            <li>Buka <a href="https://docs.google.com/spreadsheets/" target="_blank" class="text-indigo-600 hover:underline">Google Sheets</a> dan buat spreadsheet baru. Beri nama, misalnya "Database Kuis".</li>
+                            <li>Buka <a href="https://sheets.new" target="_blank" class="text-indigo-600 hover:underline">Google Sheets</a> dan buat spreadsheet baru. Beri nama, misalnya "Database Kuis".</li>
                             <li>Buka <strong>Ekstensi > Apps Script</strong>.</li>
                             <li>Hapus semua kode contoh di `Code.gs` dan tempel kode di bawah ini.</li>
                             <div class="relative my-2">
@@ -171,6 +177,7 @@
 
                 <div id="quiz-review-section" class="card hidden">
                     <h2 class="text-xl font-bold mb-4">3. Tinjau Soal</h2>
+                    <p class="text-xs text-gray-500 mb-4">Catatan: Rumus matematika ditampilkan sebagai kode LaTeX di sini. Peserta akan melihatnya dalam format yang benar.</p>
                     <div id="quiz-review-form" class="space-y-4"></div>
                     <button onclick="saveQuiz()" class="btn btn-primary w-full mt-6">Simpan & Aktifkan Kuis</button>
                 </div>
@@ -405,6 +412,19 @@
         });
     }
 
+    // --- FORMULA RENDERING ---
+    function renderFormulas() {
+        if (window.renderMathInElement) {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        }
+    }
+
     // --- ADMIN FUNCTIONS ---
     function loginAdmin() {
         const password = document.getElementById('admin-password').value;
@@ -478,7 +498,8 @@
             const pdfText = await extractTextFromPDF(file);
             generationStatus.textContent = "Teks berhasil diekstrak. Menghubungi AI untuk membuat soal...";
             
-            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat ${numQuestions} pertanyaan dalam Bahasa Indonesia. Buat variasi tingkat kesulitan soal dari yang mudah hingga tingkat lanjut. Pertanyaan harus fokus pada inti dan konsep dari konten, BUKAN tentang metadata seperti nama pengarang, tahun terbit, atau edisi buku. Untuk setiap pertanyaan, berikan 4 pilihan jawaban, di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question" (string dalam Bahasa Indonesia), "options" (sebuah array berisi 4 string dalam Bahasa Indonesia), dan "answer" (string jawaban yang benar dari pilihan yang ada). Jangan sertakan penjelasan apa pun, hanya JSON saja. Teksnya adalah: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
+            const uniqueSeed = new Date().getTime();
+            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat ${numQuestions} pertanyaan dalam Bahasa Indonesia. Buat variasi pertanyaan yang beragam, kreatif, dan tidak monoton dari satu generasi ke generasi berikutnya. Jika relevan dengan konten, sertakan 1-2 pertanyaan yang melibatkan **rumus atau perhitungan**. Semua rumus matematika **HARUS** ditulis dalam format **LaTeX**. Gunakan \`$...\` untuk rumus inline (contoh: $E=mc^2$) dan \`$$...$$\` untuk rumus blok (contoh: $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$). Pertanyaan harus fokus pada inti dan konsep dari konten, BUKAN tentang metadata. Untuk setiap pertanyaan, berikan 4 pilihan jawaban, di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question", "options", dan "answer". Jangan sertakan penjelasan apa pun, hanya JSON saja. Gunakan seed ini untuk memastikan keunikan: ${uniqueSeed}. Teksnya adalah: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
             
             const generatedQuestions = await callGeminiAPI(prompt, appState.geminiApiKey);
             
@@ -693,7 +714,7 @@
                         </tr>
                     </thead><tbody class="bg-white divide-y divide-gray-200">`;
                 
-                const medals = ['�', '🥈', '🥉'];
+                const medals = ['🥇', '🥈', '🥉'];
                 data.leaderboard.slice(0, 10).forEach((row, index) => {
                     tableHTML += `<tr>
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-bold">${medals[index] || index + 1}</td>
@@ -822,15 +843,17 @@
 
         const q = appState.quizQuestions[appState.currentQuestionIndex];
         questionCounter.textContent = `Soal ${appState.currentQuestionIndex + 1} / ${appState.quizQuestions.length}`;
-        questionText.textContent = q.question;
+        questionText.innerHTML = q.question; // Use innerHTML for LaTeX
         optionsContainer.innerHTML = '';
         q.options.forEach(option => {
             const optEl = document.createElement('div');
-            optEl.textContent = option;
+            optEl.innerHTML = option; // Use innerHTML for LaTeX
             optEl.className = 'p-4 rounded-lg quiz-option';
             optEl.onclick = () => handleOptionSelect(optEl, option);
             optionsContainer.appendChild(optEl);
         });
+
+        renderFormulas();
     }
     
     function handleOptionSelect(optionEl, option) {
@@ -905,12 +928,12 @@
         // Display detailed review
         quizReviewDetails.innerHTML = '';
         appState.quizQuestions.forEach((q, index) => {
-            const userAnswer = appState.userAnswers[index];
+            const userAnswer = appState.userAnswers[index] || 'Tidak dijawab';
             const isCorrect = userAnswer === q.answer;
             const reviewItem = document.createElement('div');
             reviewItem.className = `p-3 rounded-lg border ${isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`;
             
-            let answerHtml = `<p class="mt-2 text-sm">Jawaban Anda: <span class="font-semibold">${userAnswer || 'Tidak dijawab'}</span> <span class="${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? '✔ Benar' : '✖ Salah'}</span></p>`;
+            let answerHtml = `<p class="mt-2 text-sm">Jawaban Anda: <span class="font-semibold">${userAnswer}</span> <span class="${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? '✔ Benar' : '✖ Salah'}</span></p>`;
             if (!isCorrect) {
                 answerHtml += `<p class="text-sm">Jawaban yang Benar: <span class="font-semibold text-green-700">${q.answer}</span></p>`;
             }
@@ -921,6 +944,8 @@
             `;
             quizReviewDetails.appendChild(reviewItem);
         });
+        
+        renderFormulas();
 
 
         // Send data to Google Sheet
@@ -968,7 +993,7 @@ function doGet(e) {
   if (action == 'getLeaderboard') {
     try {
       const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-      if (!sheet) {
+      if (!sheet || sheet.getLastRow() < 2) {
         return ContentService.createTextOutput(JSON.stringify({ success: true, leaderboard: [] })).setMimeType(ContentService.MimeType.JSON);
       }
       const data = sheet.getDataRange().getValues();
@@ -1104,6 +1129,8 @@ function doPost(e) {
         } else {
             showRoleSelectionPage();
         }
+        
+        renderFormulas();
     };
     </script>
 </body>
