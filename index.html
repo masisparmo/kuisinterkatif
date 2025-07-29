@@ -998,14 +998,15 @@ function doGet(e) {
       }
       const data = sheet.getDataRange().getValues();
       const headers = data.shift();
+      const lowerCaseHeaders = headers.map(h => h.toString().toLowerCase().trim());
       
-      const nameIndex = headers.indexOf("Nama");
-      const companyIndex = headers.indexOf("Perusahaan/Institusi");
-      const scoreIndex = headers.indexOf("Skor Akhir");
+      const nameIndex = lowerCaseHeaders.indexOf("nama");
+      const companyIndex = lowerCaseHeaders.indexOf("perusahaan/institusi");
+      const scoreIndex = lowerCaseHeaders.indexOf("skor akhir");
       
       const leaderboard = data.map(row => ({
         nama: row[nameIndex],
-        company: row[companyIndex],
+        company: companyIndex !== -1 ? row[companyIndex] : '-',
         skorAkhir: parseFloat(row[scoreIndex])
       })).sort((a, b) => b.skorAkhir - a.skorAkhir);
       
