@@ -33,6 +33,8 @@
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 50; display: flex; justify-content: center; align-items: center; }
         .modal-content { z-index: 60; max-height: 90vh; overflow-y: auto; }
         .code-block { background-color: #1f2937; color: #d1d5db; padding: 1rem; border-radius: 0.5rem; font-family: 'Courier New', Courier, monospace; font-size: 0.875rem; white-space: pre-wrap; word-wrap: break-word; }
+        .tab-btn { padding: 0.5rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { border-color: #4f46e5; color: #4f46e5; font-weight: 600; }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -41,11 +43,11 @@
 
         <!-- ===== HALAMAN UTAMA (PEMILIHAN ROLE) ===== -->
         <div id="role-selection-page" class="card text-center">
-            <h1 class="text-2xl font-bold text-gray-800">Kuis Interaktif</h1>
-            <p class="text-gray-500 mt-2 mb-8">Pilih Anda Sebagai?</p>
+            <h1 class="text-2xl font-bold text-gray-800">Selamat Datang!</h1>
+            <p class="text-gray-500 mt-2 mb-8">Silakan pilih peran Anda untuk melanjutkan.</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <button onclick="showAdminLoginPage()" class="btn btn-primary">Admin Kuis</button>
-                <button onclick="showParticipantPage()" class="btn btn-secondary">Peserta Kuis</button>
+                <button onclick="showAdminLoginPage()" class="btn btn-primary">Saya Pembicara (Admin)</button>
+                <button onclick="showParticipantPage()" class="btn btn-secondary">Saya Peserta</button>
             </div>
         </div>
         
@@ -156,8 +158,39 @@
                 </div>
 
                 <div class="card">
-                    <h2 class="text-xl font-bold mb-4">2. Buat Kuis dari PDF</h2>
-                    <div class="mb-4">
+                    <h2 class="text-xl font-bold mb-4">2. Buat Kuis dari Materi</h2>
+                    
+                    <!-- Tabs for content source -->
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                            <button onclick="switchTab('file')" id="tab-btn-file" class="tab-btn active">File PDF</button>
+                            <button onclick="switchTab('text')" id="tab-btn-text" class="tab-btn">Teks</button>
+                            <button onclick="switchTab('web')" id="tab-btn-web" class="tab-btn">URL Web</button>
+                            <button onclick="switchTab('youtube')" id="tab-btn-youtube" class="tab-btn">URL YouTube</button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="mt-4">
+                        <div id="tab-content-file">
+                            <p class="text-sm text-gray-500 mb-3">Unggah satu atau lebih file PDF. AI akan membuatkan soal berdasarkan gabungan isinya.</p>
+                            <input type="file" id="pdf-upload" accept=".pdf" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        </div>
+                        <div id="tab-content-text" class="hidden">
+                             <p class="text-sm text-gray-500 mb-3">Tempelkan teks materi Anda di sini.</p>
+                             <textarea id="text-input" rows="8" class="w-full border-gray-300 rounded-md shadow-sm p-2" placeholder="Ketik atau tempel teks di sini..."></textarea>
+                        </div>
+                        <div id="tab-content-web" class="hidden">
+                            <p class="text-sm text-gray-500 mb-3">Masukkan URL halaman web atau artikel. AI akan membaca kontennya.</p>
+                            <input type="url" id="web-url-input" class="w-full border-gray-300 rounded-md shadow-sm p-2" placeholder="https://contoh.com/artikel-anda">
+                        </div>
+                        <div id="tab-content-youtube" class="hidden">
+                            <p class="text-sm text-gray-500 mb-3">Masukkan URL video YouTube. AI akan membuat soal dari judul dan deskripsi video.</p>
+                            <input type="url" id="youtube-url-input" class="w-full border-gray-300 rounded-md shadow-sm p-2" placeholder="https://www.youtube.com/watch?v=xxxxxx">
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
                         <label for="question-count" class="block text-sm font-medium text-gray-700">Jumlah Soal</label>
                         <select id="question-count" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                             <option value="5">5 Soal</option>
@@ -168,9 +201,8 @@
                         </select>
                         <input type="number" id="custom-question-count" class="mt-2 hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Masukkan jumlah soal" min="1" max="50">
                     </div>
-                    <p class="text-sm text-gray-500 mb-3">Unggah e-book (PDF). AI akan membuatkan soal berdasarkan isinya.</p>
-                    <input type="file" id="pdf-upload" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                    <button id="generate-quiz-btn" onclick="generateQuizFromPDF()" class="btn btn-primary w-full mt-4" disabled>Buat Soal dengan AI</button>
+
+                    <button id="generate-quiz-btn" onclick="generateQuizFromActiveSource()" class="btn btn-primary w-full mt-4" disabled>Buat Soal dengan AI</button>
                     <div id="generation-loader" class="hidden mx-auto mt-4 loader"></div>
                     <p id="generation-status" class="text-center text-sm text-gray-500 mt-2"></p>
                 </div>
@@ -295,7 +327,8 @@
         quizSeconds: 0,
         userAnswers: [],
         selectedOption: null,
-        currentQuestionIndex: 0
+        currentQuestionIndex: 0,
+        activeTab: 'file' // Default active tab
     };
 
     // --- DOM ELEMENTS ---
@@ -312,6 +345,9 @@
     const quizTimeLimitSelect = document.getElementById('quiz-time-limit');
     const customQuizTimeInput = document.getElementById('custom-quiz-time');
     const pdfUploadInput = document.getElementById('pdf-upload');
+    const textInput = document.getElementById('text-input');
+    const webUrlInput = document.getElementById('web-url-input');
+    const youtubeUrlInput = document.getElementById('youtube-url-input');
     const questionCountSelect = document.getElementById('question-count');
     const customQuestionCountInput = document.getElementById('custom-question-count');
     const generationLoader = document.getElementById('generation-loader');
@@ -467,53 +503,143 @@
                 localStorage.setItem('maxTime', appState.maxTime);
             }
 
-            generateQuizBtn.disabled = false;
+            validateSource();
             showAlert("Sukses", "Konfigurasi berhasil disimpan.");
         } else {
             showAlert("Error", "Harap isi URL Google Sheet dan Kunci API Gemini yang valid.");
         }
     }
+    
+    function switchTab(tabName) {
+        appState.activeTab = tabName;
+        ['file', 'text', 'web', 'youtube'].forEach(name => {
+            document.getElementById(`tab-btn-${name}`).classList.remove('active');
+            document.getElementById(`tab-content-${name}`).classList.add('hidden');
+        });
+        document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+        document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+        validateSource();
+    }
 
-    async function generateQuizFromPDF() {
-        const file = pdfUploadInput.files[0];
-        if (!file) {
-            showAlert("Error", "Silakan pilih file PDF terlebih dahulu.");
-            return;
+    function validateSource() {
+        let sourceIsValid = false;
+        if (appState.activeTab === 'file') {
+            sourceIsValid = pdfUploadInput.files.length > 0;
+        } else if (appState.activeTab === 'text') {
+            sourceIsValid = textInput.value.trim().length > 50; // Require some minimum text
+        } else if (appState.activeTab === 'web') {
+            sourceIsValid = webUrlInput.value.trim().startsWith('http');
+        } else if (appState.activeTab === 'youtube') {
+            sourceIsValid = youtubeUrlInput.value.trim().includes('youtube.com') || youtubeUrlInput.value.trim().includes('youtu.be');
         }
+        
+        generateQuizBtn.disabled = !(sourceIsValid && appState.googleSheetUrl && appState.geminiApiKey);
+    }
 
-        let numQuestions = questionCountSelect.value;
-        if (numQuestions === 'custom') {
-            numQuestions = customQuestionCountInput.value;
-        }
-        if (!numQuestions || numQuestions < 1) {
-            showAlert("Error", "Jumlah soal tidak valid.");
-            return;
-        }
-
+    async function generateQuizFromActiveSource() {
+        let sourceText = '';
         generationLoader.classList.remove('hidden');
-        generationStatus.textContent = "Mengekstrak teks dari PDF...";
         generateQuizBtn.disabled = true;
+        generationStatus.textContent = 'Mempersiapkan materi...';
 
         try {
-            const pdfText = await extractTextFromPDF(file);
-            generationStatus.textContent = "Teks berhasil diekstrak. Menghubungi AI untuk membuat soal...";
+            switch (appState.activeTab) {
+                case 'file':
+                    generationStatus.textContent = 'Mengekstrak teks dari file PDF...';
+                    sourceText = await getTextFromFiles();
+                    break;
+                case 'text':
+                    generationStatus.textContent = 'Menggunakan teks yang ditempel...';
+                    sourceText = textInput.value.trim();
+                    if (!sourceText) throw new Error("Area teks kosong.");
+                    break;
+                case 'web':
+                    generationStatus.textContent = 'Mengambil konten dari URL Web...';
+                    sourceText = await getTextFromWebUrl(webUrlInput.value.trim());
+                    break;
+                case 'youtube':
+                    generationStatus.textContent = 'Mengambil info dari video YouTube...';
+                    sourceText = await getTextFromYouTubeUrl(youtubeUrlInput.value.trim());
+                    break;
+            }
             
+            if (!sourceText || sourceText.length < 100) {
+                 throw new Error("Tidak dapat menemukan konten yang cukup dari sumber yang diberikan. Coba sumber lain.");
+            }
+
+            generationStatus.textContent = "Materi siap. Menghubungi AI untuk membuat soal...";
+            
+            let numQuestions = questionCountSelect.value;
+            if (numQuestions === 'custom') {
+                numQuestions = customQuestionCountInput.value;
+            }
+            if (!numQuestions || numQuestions < 1) throw new Error("Jumlah soal tidak valid.");
+
             const uniqueSeed = new Date().getTime();
-            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat ${numQuestions} pertanyaan dalam Bahasa Indonesia. Buat variasi pertanyaan yang beragam, kreatif, dan tidak monoton dari satu generasi ke generasi berikutnya. Jika relevan dengan konten, sertakan 1-2 pertanyaan yang melibatkan **rumus atau perhitungan**. Semua rumus matematika **HARUS** ditulis dalam format **LaTeX**. Gunakan \`$...\` untuk rumus inline (contoh: $E=mc^2$) dan \`$$...$$\` untuk rumus blok (contoh: $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$). Pertanyaan harus fokus pada inti dan konsep dari konten, BUKAN tentang metadata. Untuk setiap pertanyaan, berikan 4 pilihan jawaban, di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question", "options", dan "answer". Jangan sertakan penjelasan apa pun, hanya JSON saja. Gunakan seed ini untuk memastikan keunikan: ${uniqueSeed}. Teksnya adalah: \n\n---\n${pdfText.substring(0, 8000)}\n---`;
+            const prompt = `Berdasarkan teks dari dokumen berikut, buatlah kuis pilihan ganda dengan tepat ${numQuestions} pertanyaan dalam Bahasa Indonesia. Buat variasi pertanyaan yang beragam, kreatif, dan tidak monoton dari satu generasi ke generasi berikutnya. Jika relevan dengan konten, sertakan 1-2 pertanyaan yang melibatkan **rumus atau perhitungan**. Semua rumus matematika **HARUS** ditulis dalam format **LaTeX**. Gunakan \`$...\` untuk rumus inline (contoh: $E=mc^2$) dan \`$$...$$\` untuk rumus blok (contoh: $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$). Pertanyaan harus fokus pada inti dan konsep dari konten, BUKAN tentang metadata. Untuk setiap pertanyaan, berikan 4 pilihan jawaban, di mana satu adalah jawaban yang benar dan tiga lainnya adalah pengecoh yang masuk akal namun salah. Kembalikan hasilnya dalam format JSON array of objects. Setiap objek harus memiliki tiga kunci: "question", "options", dan "answer". Jangan sertakan penjelasan apa pun, hanya JSON saja. Gunakan seed ini untuk memastikan keunikan: ${uniqueSeed}. Teksnya adalah: \n\n---\n${sourceText.substring(0, 15000)}\n---`;
             
             const generatedQuestions = await callGeminiAPI(prompt, appState.geminiApiKey);
             
             appState.quizQuestions = JSON.parse(generatedQuestions);
             displayQuizForReview();
             generationStatus.textContent = "Soal berhasil dibuat! Silakan tinjau di bawah.";
+
         } catch (error) {
             console.error(error);
-            showAlert("Error", "Gagal membuat soal. " + error.message);
+            showAlert("Error", "Gagal membuat soal: " + error.message);
             generationStatus.textContent = "Terjadi kesalahan.";
         } finally {
             generationLoader.classList.add('hidden');
-            generateQuizBtn.disabled = false;
+            validateSource();
         }
+    }
+
+    async function getTextFromFiles() {
+        const files = pdfUploadInput.files;
+        if (!files.length) throw new Error("Tidak ada file yang dipilih.");
+        
+        const readers = Array.from(files).map(file => extractTextFromPDF(file));
+        const texts = await Promise.all(readers);
+        return texts.join('\n\n');
+    }
+
+    async function getTextFromWebUrl(url) {
+        if (!url) throw new Error("URL Web tidak valid.");
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`Gagal mengambil konten dari URL. Status: ${response.status}`);
+        
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        
+        // Remove script, style, nav, footer, header elements
+        doc.querySelectorAll('script, style, nav, footer, header, aside').forEach(el => el.remove());
+        
+        // Prioritize <main> or <article> tags
+        const mainContent = doc.querySelector('main') || doc.querySelector('article') || doc.body;
+        
+        return mainContent.textContent.replace(/\s\s+/g, ' ').trim();
+    }
+
+    async function getTextFromYouTubeUrl(url) {
+        if (!url) throw new Error("URL YouTube tidak valid.");
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`Gagal mengambil konten dari URL YouTube. Status: ${response.status}`);
+        
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const title = doc.querySelector('title')?.textContent || '';
+        const description = doc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+
+        if (!title && !description) {
+            throw new Error("Tidak dapat menemukan judul atau deskripsi dari video YouTube ini.");
+        }
+
+        return `Judul Video: ${title}\n\nDeskripsi:\n${description}`;
     }
     
     async function callGeminiAPI(prompt, apiKey) {
@@ -674,13 +800,6 @@
             console.error("Bitly error:", error);
             showAlert("Info", "Gagal memendekkan URL dengan Bitly, menggunakan URL panjang.");
             return longUrl;
-        }
-    }
-
-    function updateWithShortUrl() {
-        const shortUrl = document.getElementById('short-url-input').value;
-        if (shortUrl) {
-            updateLinkAndQRCode(shortUrl);
         }
     }
     
@@ -1077,6 +1196,13 @@ function doPost(e) {
                 customQuizTimeInput.classList.add('hidden');
             }
         });
+        
+        // Listeners for source inputs to validate
+        pdfUploadInput.addEventListener('change', validateSource);
+        textInput.addEventListener('input', validateSource);
+        webUrlInput.addEventListener('input', validateSource);
+        youtubeUrlInput.addEventListener('input', validateSource);
+
 
         // --- URL and Config Handling ---
         const urlParams = new URLSearchParams(window.location.search);
@@ -1121,7 +1247,7 @@ function doPost(e) {
         }
         
         if (appState.googleSheetUrl && appState.geminiApiKey) {
-            generateQuizBtn.disabled = false;
+            validateSource();
         }
 
         // Check URL for routing
