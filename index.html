@@ -299,6 +299,7 @@
                     </div>
                     <div id="leaderboard-loader" class="hidden mx-auto loader"></div>
                     <div id="leaderboard-content" class="overflow-x-auto"></div>
+                    <div id="answer-key-section" class="hidden mt-6"></div>
                     <button onclick="hideLeaderboard()" class="btn btn-secondary w-full mt-4">Sembunyikan Leaderboard</button>
                 </div>
             </div>
@@ -430,6 +431,7 @@
     const leaderboardSection = document.getElementById('leaderboard-section');
     const realtimeToggle = document.getElementById('realtime-toggle');
     const aiGeneratorOptions = document.getElementById('ai-generator-options');
+    const answerKeySection = document.getElementById('answer-key-section');
     // Branding
     const logoUploadInput = document.getElementById('logo-upload');
     const logoPreview = document.getElementById('logo-preview');
@@ -506,10 +508,12 @@
         showAdminDashboard();
         leaderboardSection.classList.remove('hidden');
         fetchLeaderboard(); // Fetch once immediately
+        displayAnswerKey();
     }
     
     function hideLeaderboard() {
         leaderboardSection.classList.add('hidden');
+        answerKeySection.classList.add('hidden');
         // Stop real-time updates when hiding
         if (appState.leaderboardTimer) {
             clearInterval(appState.leaderboardTimer);
@@ -1001,6 +1005,27 @@
             }
         }
     }
+    
+    function displayAnswerKey() {
+        answerKeySection.innerHTML = '';
+        if (appState.quizQuestions.length > 0) {
+            let keyHTML = `<h3 class="text-xl font-bold mb-2">Pembahasan Soal & Kunci Jawaban</h3><div class="space-y-3">`;
+            appState.quizQuestions.forEach((q, index) => {
+                keyHTML += `
+                    <div class="p-3 bg-gray-50 rounded-lg text-sm">
+                        <p class="font-semibold">${index + 1}. ${q.question}</p>
+                        <p class="text-green-600 font-bold mt-1">Jawaban: ${q.answer}</p>
+                    </div>
+                `;
+            });
+            keyHTML += `</div>`;
+            answerKeySection.innerHTML = keyHTML;
+            answerKeySection.classList.remove('hidden');
+            renderFormulas();
+        } else {
+            answerKeySection.classList.add('hidden');
+        }
+    }
 
     async function fetchLeaderboard() {
         const loader = document.getElementById('leaderboard-loader');
@@ -1082,10 +1107,12 @@
     async function handleParticipantRegistration(e) {
         e.preventDefault();
         
-        const name = document.getElementById('name').value;
-        const company = document.getElementById('company').value;
-        if (!name || !company) {
-            showAlert("Data Tidak Lengkap", "Harap isi Nama Lengkap dan Perusahaan/Institusi.");
+        const name = document.getElementById('name').value.trim();
+        const company = document.getElementById('company').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+
+        if (!name || !company || !phone) {
+            showAlert("Data Tidak Lengkap", "Harap isi semua kolom.");
             return;
         }
 
@@ -1098,6 +1125,16 @@
                 return;
             }
 
+            // Check for duplicate participant
+            const checkUrl = `${appState.googleSheetUrl}?action=checkParticipant&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&v=${new Date().getTime()}`;
+            const checkResponse = await fetch(checkUrl);
+            const checkData = await checkResponse.json();
+
+            if (checkData.exists) {
+                showAlert("Pendaftaran Gagal", "Anda sudah pernah mengikuti kuis ini. Setiap peserta hanya diizinkan mengikuti satu kali.");
+                return;
+            }
+
             const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getQuiz&v=${new Date().getTime()}`;
             const response = await fetch(urlWithCacheBuster);
 
@@ -1106,7 +1143,7 @@
             const data = await response.json();
 
             if (data.success && data.isActive) {
-                appState.participantData = { name, company, phone: document.getElementById('phone').value };
+                appState.participantData = { name, company, phone };
                 appState.quizQuestions = data.questions;
                 appState.maxTime = data.maxTime || 300; // Use time from server, or default
                 
@@ -1258,7 +1295,7 @@
             </div>
         `;
 
-        // Display detailed review
+        // Display detailed review (without correct answers)
         quizReviewDetails.innerHTML = '';
         appState.quizQuestions.forEach((q, index) => {
             const userAnswer = appState.userAnswers[index] || 'Tidak dijawab';
@@ -1267,9 +1304,6 @@
             reviewItem.className = `p-3 rounded-lg border ${isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`;
             
             let answerHtml = `<p class="mt-2 text-sm">Jawaban Anda: <span class="font-semibold">${userAnswer}</span> <span class="${isCorrect ? 'text-green-600' : 'text-red-600'}">${isCorrect ? '✔ Benar' : '✖ Salah'}</span></p>`;
-            if (!isCorrect) {
-                answerHtml += `<p class="text-sm">Jawaban yang Benar: <span class="font-semibold text-green-700">${q.answer}</span></p>`;
-            }
 
             reviewItem.innerHTML = `
                 <p class="font-semibold text-gray-800">${index + 1}. ${q.question}</p>
@@ -1447,6 +1481,34 @@ function doGet(e) {
       }));
       
       return ContentService.createTextOutput(JSON.stringify({ success: true, questions: questions })).setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.message })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  
+  if (action == 'checkParticipant') {
+    try {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME_RESULTS);
+      if (!sheet || sheet.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, exists: false })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const name = e.parameter.name.toLowerCase().trim();
+      const phone = e.parameter.phone.trim();
+      
+      const data = sheet.getDataRange().getValues();
+      const headers = data.shift();
+      const lowerCaseHeaders = headers.map(h => h.toString().toLowerCase().trim());
+      const nameIndex = lowerCaseHeaders.indexOf("nama");
+      const phoneIndex = lowerCaseHeaders.indexOf("no. whatsapp");
+
+      for (let i = 0; i < data.length; i++) {
+        const rowName = data[i][nameIndex].toString().toLowerCase().trim();
+        const rowPhone = data[i][phoneIndex].toString().trim();
+        if (rowName === name || rowPhone === phone) {
+          return ContentService.createTextOutput(JSON.stringify({ success: true, exists: true })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: true, exists: false })).setMimeType(ContentService.MimeType.JSON);
     } catch (error) {
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.message })).setMimeType(ContentService.MimeType.JSON);
     }
