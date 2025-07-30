@@ -15,26 +15,33 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" xintegrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
 
     <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-color-hover: #4338ca;
+        }
         body { font-family: 'Inter', sans-serif; }
         .card { background-color: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); transition: all 0.3s ease-in-out; }
         .btn { display: inline-block; text-align: center; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; color: white; transition: background-color 0.2s; cursor: pointer; border: none; }
-        .btn-primary { background-color: #4f46e5; }
-        .btn-primary:hover { background-color: #4338ca; }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: var(--primary-color-hover); }
         .btn-secondary { background-color: #6b7280; }
         .btn-secondary:hover { background-color: #4b5563; }
         .btn-info { background-color: #3b82f6; }
         .btn-info:hover { background-color: #2563eb; }
         .btn:disabled { background-color: #d1d5db; cursor: not-allowed; }
         .quiz-option { border: 1px solid #e5e7eb; cursor: pointer; }
-        .quiz-option:hover { background-color: #f3f4f6; border-color: #4f46e5; }
-        .quiz-option.selected { background-color: #e0e7ff; border-color: #4f46e5; color: #3730a3; }
-        .loader { border: 4px solid #f3f4f6; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .quiz-option:hover { background-color: #f3f4f6; border-color: var(--primary-color); }
+        .quiz-option.selected { background-color: #e0e7ff; border-color: var(--primary-color); color: #3730a3; }
+        .loader { border: 4px solid #f3f4f6; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 50; display: flex; justify-content: center; align-items: center; }
         .modal-content { z-index: 60; max-height: 90vh; overflow-y: auto; }
         .code-block { background-color: #1f2937; color: #d1d5db; padding: 1rem; border-radius: 0.5rem; font-family: 'Courier New', Courier, monospace; font-size: 0.875rem; white-space: pre-wrap; word-wrap: break-word; }
         .tab-btn { padding: 0.5rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; }
-        .tab-btn.active { border-color: #4f46e5; color: #4f46e5; font-weight: 600; }
+        .tab-btn.active { border-color: var(--primary-color); color: var(--primary-color); font-weight: 600; }
+        .color-picker-wrapper { border: 1px solid #d1d5db; border-radius: 0.5rem; overflow: hidden; display: inline-flex; align-items: center;}
+        .color-picker-wrapper input[type="color"] { width: 40px; height: 40px; border: none; padding: 0; }
+        .color-picker-wrapper input[type="text"] { border: none; outline: none; padding-left: 0.5rem; }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -43,6 +50,7 @@
 
         <!-- ===== HALAMAN UTAMA (PEMILIHAN ROLE) ===== -->
         <div id="role-selection-page" class="card text-center">
+            <div id="main-logo-container" class="flex justify-center mb-4"></div>
             <h1 class="text-2xl font-bold text-gray-800">Selamat Datang!</h1>
             <p class="text-gray-500 mt-2 mb-8">Silakan pilih peran Anda untuk melanjutkan.</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
@@ -157,8 +165,31 @@
                     <button onclick="saveConfig()" class="btn btn-primary mt-4">Simpan Konfigurasi</button>
                 </div>
 
+                 <div class="card">
+                    <h2 class="text-xl font-bold mb-4">2. Kustomisasi Tampilan (Branding)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Logo Acara/Perusahaan</label>
+                            <input type="file" id="logo-upload" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            <div class="mt-2 p-2 border rounded-md h-24 flex items-center justify-center bg-gray-50">
+                                <img id="logo-preview" src="" alt="Pratinjau Logo" class="max-h-full max-w-full hidden">
+                                <span id="logo-placeholder" class="text-gray-400 text-sm">Pratinjau Logo</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Warna Tema</label>
+                            <div class="color-picker-wrapper">
+                                <input type="color" id="theme-color-picker" value="#4f46e5">
+                                <input type="text" id="theme-color-hex" value="#4f46e5" class="font-mono">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Warna ini akan diterapkan pada tombol utama dan elemen lainnya.</p>
+                        </div>
+                    </div>
+                     <button onclick="saveBranding()" class="btn btn-primary mt-4">Simpan Tampilan</button>
+                </div>
+
                 <div class="card">
-                    <h2 class="text-xl font-bold mb-4">2. Buat Kuis dari Materi</h2>
+                    <h2 class="text-xl font-bold mb-4">3. Buat Kuis dari Materi</h2>
                     
                     <!-- Tabs for content source -->
                     <div class="border-b border-gray-200">
@@ -208,7 +239,7 @@
                 </div>
 
                 <div id="quiz-review-section" class="card hidden">
-                    <h2 class="text-xl font-bold mb-4">3. Tinjau Soal</h2>
+                    <h2 class="text-xl font-bold mb-4">4. Tinjau Soal</h2>
                     <p class="text-xs text-gray-500 mb-4">Catatan: Rumus matematika ditampilkan sebagai kode LaTeX di sini. Peserta akan melihatnya dalam format yang benar.</p>
                     <div id="quiz-review-form" class="space-y-4"></div>
                     <button onclick="saveQuiz()" class="btn btn-primary w-full mt-6">Simpan & Aktifkan Kuis</button>
@@ -241,6 +272,7 @@
         <div id="participant-section" class="hidden w-full">
             <!-- Halaman Pendaftaran Peserta -->
             <div id="register-page" class="card">
+                <div id="participant-logo-container" class="flex justify-center mb-6"></div>
                 <div class="text-center mb-6">
                     <h1 class="text-2xl font-bold text-gray-800">Kuis Interaktif Seminar</h1>
                     <p class="text-gray-500 mt-1">Isi data diri untuk memulai!</p>
@@ -319,6 +351,8 @@
         googleSheetUrl: '',
         geminiApiKey: '',
         bitlyToken: '',
+        logoUrl: '',
+        themeColor: '#4f46e5',
         quizQuestions: [],
         quizIsActive: false,
         maxTime: 300, // 5 menit dalam detik (default)
@@ -356,6 +390,12 @@
     const quizReviewForm = document.getElementById('quiz-review-form');
     const quizActiveSection = document.getElementById('quiz-active-section');
     const leaderboardSection = document.getElementById('leaderboard-section');
+    // Branding
+    const logoUploadInput = document.getElementById('logo-upload');
+    const logoPreview = document.getElementById('logo-preview');
+    const logoPlaceholder = document.getElementById('logo-placeholder');
+    const themeColorPicker = document.getElementById('theme-color-picker');
+    const themeColorHex = document.getElementById('theme-color-hex');
     // Participant
     const participantSection = document.getElementById('participant-section');
     const registerPage = document.getElementById('register-page');
@@ -748,7 +788,15 @@
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'saveQuiz', questions: appState.quizQuestions, maxTime: appState.maxTime })
+                body: JSON.stringify({ 
+                    action: 'saveQuiz', 
+                    questions: appState.quizQuestions, 
+                    maxTime: appState.maxTime,
+                    branding: {
+                        logoUrl: appState.logoUrl,
+                        themeColor: appState.themeColor
+                    }
+                })
             });
 
             appState.quizIsActive = true;
@@ -901,6 +949,12 @@
                 appState.participantData = { name, company, phone: document.getElementById('phone').value };
                 appState.quizQuestions = data.questions;
                 appState.maxTime = data.maxTime || 300; // Use time from server, or default
+                
+                // Apply branding from server
+                if(data.branding) {
+                    applyBranding(data.branding.logoUrl, data.branding.themeColor);
+                }
+
                 startParticipantQuiz();
             } else {
                 quizNotReadyMsg.classList.remove('hidden');
@@ -1092,6 +1146,80 @@
             console.error("Failed to send data to Google Sheet:", error);
         }
     }
+    
+    // --- BRANDING FUNCTIONS ---
+    function handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            appState.logoUrl = e.target.result; // Base64 string
+            logoPreview.src = appState.logoUrl;
+            logoPreview.classList.remove('hidden');
+            logoPlaceholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleColorChange() {
+        const newColor = themeColorPicker.value;
+        appState.themeColor = newColor;
+        themeColorHex.value = newColor;
+        applyBranding(appState.logoUrl, appState.themeColor);
+    }
+
+    function saveBranding() {
+        localStorage.setItem('brandingLogo', appState.logoUrl);
+        localStorage.setItem('brandingColor', appState.themeColor);
+        showAlert("Sukses", "Pengaturan tampilan berhasil disimpan.");
+    }
+
+    function loadBranding() {
+        const savedLogo = localStorage.getItem('brandingLogo');
+        const savedColor = localStorage.getItem('brandingColor');
+        
+        if (savedLogo) {
+            appState.logoUrl = savedLogo;
+            logoPreview.src = savedLogo;
+            logoPreview.classList.remove('hidden');
+            logoPlaceholder.classList.add('hidden');
+        }
+        if (savedColor) {
+            appState.themeColor = savedColor;
+            themeColorPicker.value = savedColor;
+            themeColorHex.value = savedColor;
+        }
+        applyBranding(appState.logoUrl, appState.themeColor);
+    }
+    
+    function applyBranding(logoUrl, themeColor) {
+        // Apply color
+        if (themeColor) {
+            document.documentElement.style.setProperty('--primary-color', themeColor);
+            // Simple algorithm to find a hover color
+            const hoverColor = themeColor.replace(/#/, '')
+                .match(/.{1,2}/g)
+                .map(hex => Math.max(0, parseInt(hex, 16) - 20))
+                .map(dec => dec.toString(16).padStart(2, '0'))
+                .join('');
+            document.documentElement.style.setProperty('--primary-color-hover', `#${hoverColor}`);
+        }
+
+        // Apply logo
+        const logoContainers = [document.getElementById('main-logo-container'), document.getElementById('participant-logo-container')];
+        logoContainers.forEach(container => {
+            if (container) {
+                container.innerHTML = '';
+                if (logoUrl) {
+                    const img = document.createElement('img');
+                    img.src = logoUrl;
+                    img.className = 'max-h-20';
+                    container.appendChild(img);
+                }
+            }
+        });
+    }
 
 
     // --- INITIALIZATION ---
@@ -1106,7 +1234,14 @@ function doGet(e) {
     const props = SCRIPT_PROP.getProperties();
     const questions = JSON.parse(props.questions || '[]');
     const maxTime = props.maxTime || 300;
-    return ContentService.createTextOutput(JSON.stringify({ success: true, isActive: questions.length > 0, questions: questions, maxTime: maxTime })).setMimeType(ContentService.MimeType.JSON);
+    const branding = JSON.parse(props.branding || '{}');
+    return ContentService.createTextOutput(JSON.stringify({ 
+        success: true, 
+        isActive: questions.length > 0, 
+        questions: questions, 
+        maxTime: maxTime,
+        branding: branding
+    })).setMimeType(ContentService.MimeType.JSON);
   }
   
   if (action == 'getLeaderboard') {
@@ -1145,6 +1280,7 @@ function doPost(e) {
     if (data.action === 'saveQuiz') {
       SCRIPT_PROP.setProperty("questions", JSON.stringify(data.questions || []));
       SCRIPT_PROP.setProperty("maxTime", data.maxTime || 300);
+      SCRIPT_PROP.setProperty("branding", JSON.stringify(data.branding || {}));
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Quiz saved" })).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -1202,6 +1338,14 @@ function doPost(e) {
         textInput.addEventListener('input', validateSource);
         webUrlInput.addEventListener('input', validateSource);
         youtubeUrlInput.addEventListener('input', validateSource);
+        
+        // Listeners for branding
+        logoUploadInput.addEventListener('change', handleLogoUpload);
+        themeColorPicker.addEventListener('input', handleColorChange);
+        themeColorHex.addEventListener('change', (e) => {
+            themeColorPicker.value = e.target.value;
+            handleColorChange();
+        });
 
 
         // --- URL and Config Handling ---
@@ -1249,6 +1393,8 @@ function doPost(e) {
         if (appState.googleSheetUrl && appState.geminiApiKey) {
             validateSource();
         }
+        
+        loadBranding();
 
         // Check URL for routing
         if (window.location.hash === '#admin') {
