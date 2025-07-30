@@ -49,6 +49,10 @@
         .toggle-switch::before { content: ''; position: absolute; top: 0.25rem; left: 0.25rem; width: 1.25rem; height: 1.25rem; background-color: white; border-radius: 9999px; transition: transform 0.2s ease-in-out; }
         .toggle-checkbox:checked + .toggle-switch { background-color: var(--primary-color); }
         .toggle-checkbox:checked + .toggle-switch::before { transform: translateX(1.75rem); }
+        /* Progress Bar */
+        .progress-bar-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; }
+        .progress-bar { background-color: var(--primary-color); height: 0.5rem; border-radius: 9999px; text-align: center; color: white; line-height: 1.25rem; transition: width 0.3s ease-in-out; animation: progress-animation 2s linear infinite; }
+        @keyframes progress-animation { 0% { background-position: 1rem 0; } 100% { background-position: -1rem 0; } }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -268,9 +272,15 @@
                     <h2 class="text-xl font-bold mb-4">4. Tinjau Soal</h2>
                     <p class="text-xs text-gray-500 mb-4">Catatan: Rumus matematika ditampilkan sebagai kode LaTeX di sini. Peserta akan melihatnya dalam format yang benar.</p>
                     <div id="quiz-review-form" class="space-y-4"></div>
+                    <div id="progress-container" class="mt-4 hidden">
+                        <span id="progress-text" class="text-sm text-gray-600"></span>
+                        <div class="progress-bar-container mt-1">
+                            <div class="progress-bar" style="width: 100%;"></div>
+                        </div>
+                    </div>
                     <div class="flex flex-col sm:flex-row gap-4 mt-6">
-                        <button onclick="saveToBank()" class="btn btn-info w-full">Simpan ke Bank Soal</button>
-                        <button onclick="saveQuiz()" class="btn btn-primary w-full">Aktifkan Kuis</button>
+                        <button id="save-to-bank-btn" onclick="saveToBank()" class="btn btn-info w-full">Simpan ke Bank Soal</button>
+                        <button id="activate-quiz-btn" onclick="saveQuiz()" class="btn btn-primary w-full">Aktifkan Kuis</button>
                     </div>
                 </div>
                 
@@ -432,6 +442,10 @@
     const realtimeToggle = document.getElementById('realtime-toggle');
     const aiGeneratorOptions = document.getElementById('ai-generator-options');
     const answerKeySection = document.getElementById('answer-key-section');
+    const progressContainer = document.getElementById('progress-container');
+    const progressText = document.getElementById('progress-text');
+    const saveToBankBtn = document.getElementById('save-to-bank-btn');
+    const activateQuizBtn = document.getElementById('activate-quiz-btn');
     // Branding
     const logoUploadInput = document.getElementById('logo-upload');
     const logoPreview = document.getElementById('logo-preview');
@@ -584,12 +598,26 @@
 
     function copyGoogleScript() {
         const scriptText = document.getElementById('google-script-code').textContent;
-        navigator.clipboard.writeText(scriptText).then(() => {
-            showAlert("Berhasil", "Kode Apps Script berhasil disalin!");
-        }, (err) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = scriptText;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showAlert("Berhasil", "Kode Apps Script berhasil disalin!");
+            } else {
+                 showAlert("Gagal", "Tidak dapat menyalin kode. Silakan salin secara manual.");
+            }
+        } catch (err) {
             console.error('Could not copy text: ', err);
             showAlert("Gagal", "Tidak dapat menyalin kode. Silakan salin secara manual.");
-        });
+        }
+        document.body.removeChild(textArea);
     }
 
     // --- FORMULA RENDERING ---
@@ -883,8 +911,22 @@
         });
         quizReviewSection.classList.remove('hidden');
     }
+    
+    function showProgress(message) {
+        progressText.textContent = message;
+        progressContainer.classList.remove('hidden');
+        saveToBankBtn.disabled = true;
+        activateQuizBtn.disabled = true;
+    }
+
+    function hideProgress() {
+        progressContainer.classList.add('hidden');
+        saveToBankBtn.disabled = false;
+        activateQuizBtn.disabled = false;
+    }
 
     async function saveQuiz() {
+        showProgress("Mengaktifkan kuis...");
         const updatedQuestions = [];
         document.querySelectorAll('#quiz-review-form > div').forEach((div, index) => {
             const question = div.querySelector('input[data-type="question"]').value;
@@ -929,10 +971,13 @@
         } catch (error) {
             console.error("Failed to save quiz:", error);
             showAlert("Error", "Gagal mengirim permintaan simpan kuis. Periksa koneksi Anda.");
+        } finally {
+            hideProgress();
         }
     }
     
     async function saveToBank() {
+        showProgress("Menyimpan ke Bank Soal...");
         const questionsToSave = [];
         document.querySelectorAll('#quiz-review-form > div').forEach((div, index) => {
             const question = div.querySelector('input[data-type="question"]').value;
@@ -943,6 +988,7 @@
 
         if (questionsToSave.length === 0) {
             showAlert("Tidak Ada Soal", "Tidak ada soal untuk disimpan.");
+            hideProgress();
             return;
         }
 
@@ -957,6 +1003,8 @@
         } catch (error) {
             console.error("Failed to save questions to bank:", error);
             showAlert("Error", "Gagal menyimpan soal ke Bank Soal. Periksa koneksi Anda.");
+        } finally {
+            hideProgress();
         }
     }
 
