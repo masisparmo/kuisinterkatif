@@ -530,6 +530,53 @@
     function closeBankModal() {
         bankModal.classList.add('hidden');
     }
+    
+    async function showQuestionBankModal() {
+        bankModal.classList.remove('hidden');
+        bankContent.innerHTML = '';
+        bankLoader.classList.remove('hidden');
+
+        try {
+            const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getQuestionBank&v=${new Date().getTime()}`;
+            const response = await fetch(urlWithCacheBuster);
+            if (!response.ok) throw new Error("Gagal menghubungi server bank soal.");
+            
+            const data = await response.json();
+            if (data.success && data.questions.length > 0) {
+                appState.questionBank = data.questions;
+                bankContent.innerHTML = appState.questionBank.map((q, index) => `
+                    <div class="flex items-start space-x-3 p-2 border rounded-md">
+                        <input type="checkbox" id="bank-q-${index}" data-q-index="${index}" class="mt-1 h-4 w-4">
+                        <label for="bank-q-${index}" class="text-sm">${q.question}</label>
+                    </div>
+                `).join('');
+            } else {
+                bankContent.innerHTML = '<p class="text-center text-gray-500">Bank soal Anda masih kosong.</p>';
+            }
+        } catch (error) {
+            console.error("Failed to fetch question bank:", error);
+            bankContent.innerHTML = '<p class="text-center text-red-500">Gagal memuat bank soal.</p>';
+        } finally {
+            bankLoader.classList.add('hidden');
+        }
+    }
+
+    function useSelectedBankQuestions() {
+        const selectedQuestions = [];
+        document.querySelectorAll('#bank-content input[type="checkbox"]:checked').forEach(checkbox => {
+            const index = parseInt(checkbox.dataset.qIndex, 10);
+            selectedQuestions.push(appState.questionBank[index]);
+        });
+
+        if (selectedQuestions.length === 0) {
+            showAlert("Tidak Ada Soal", "Harap pilih setidaknya satu soal dari bank.");
+            return;
+        }
+
+        appState.quizQuestions = selectedQuestions;
+        closeBankModal();
+        displayQuizForReview();
+    }
 
     function copyGoogleScript() {
         const scriptText = document.getElementById('google-script-code').textContent;
@@ -878,6 +925,34 @@
         } catch (error) {
             console.error("Failed to save quiz:", error);
             showAlert("Error", "Gagal mengirim permintaan simpan kuis. Periksa koneksi Anda.");
+        }
+    }
+    
+    async function saveToBank() {
+        const questionsToSave = [];
+        document.querySelectorAll('#quiz-review-form > div').forEach((div, index) => {
+            const question = div.querySelector('input[data-type="question"]').value;
+            const options = Array.from(div.querySelectorAll('input[data-opt-index]')).map(inp => inp.value);
+            const answer = div.querySelector('select[data-type="answer"]').value;
+            questionsToSave.push({ question, options, answer });
+        });
+
+        if (questionsToSave.length === 0) {
+            showAlert("Tidak Ada Soal", "Tidak ada soal untuk disimpan.");
+            return;
+        }
+
+        try {
+            await fetch(appState.googleSheetUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'saveToBank', questions: questionsToSave })
+            });
+            showAlert("Sukses!", "Soal-soal berhasil disimpan ke Bank Soal.");
+        } catch (error) {
+            console.error("Failed to save questions to bank:", error);
+            showAlert("Error", "Gagal menyimpan soal ke Bank Soal. Periksa koneksi Anda.");
         }
     }
 
