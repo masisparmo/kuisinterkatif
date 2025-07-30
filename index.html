@@ -42,6 +42,13 @@
         .color-picker-wrapper { border: 1px solid #d1d5db; border-radius: 0.5rem; overflow: hidden; display: inline-flex; align-items: center;}
         .color-picker-wrapper input[type="color"] { width: 40px; height: 40px; border: none; padding: 0; }
         .color-picker-wrapper input[type="text"] { border: none; outline: none; padding-left: 0.5rem; }
+        /* Toggle Switch */
+        .toggle-label { display: flex; align-items: center; cursor: pointer; }
+        .toggle-checkbox { opacity: 0; width: 0; height: 0; }
+        .toggle-switch { position: relative; display: inline-block; width: 3.5rem; height: 1.75rem; background-color: #d1d5db; border-radius: 9999px; transition: background-color 0.2s ease-in-out; }
+        .toggle-switch::before { content: ''; position: absolute; top: 0.25rem; left: 0.25rem; width: 1.25rem; height: 1.25rem; background-color: white; border-radius: 9999px; transition: transform 0.2s ease-in-out; }
+        .toggle-checkbox:checked + .toggle-switch { background-color: var(--primary-color); }
+        .toggle-checkbox:checked + .toggle-switch::before { transform: translateX(1.75rem); }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -52,7 +59,7 @@
         <div id="role-selection-page" class="card text-center">
             <div id="main-logo-container" class="flex justify-center mb-4"></div>
             <h1 class="text-2xl font-bold text-gray-800">KUIS INTERAKTIF</h1>
-            <p class="text-gray-500 mt-2 mb-8">Silahkan Pilih, Anda Sebagai?</p>
+            <p class="text-gray-500 mt-2 mb-8">Silakan pilih, Anda sebagai apa?</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
                 <button onclick="showAdminLoginPage()" class="btn btn-primary">Admin Kuis</button>
                 <button onclick="showParticipantPage()" class="btn btn-secondary">Peserta Kuis</button>
@@ -118,6 +125,19 @@
 
                 </div>
                 <button onclick="closeHelpModal()" class="btn btn-primary mx-auto mt-6">Tutup</button>
+            </div>
+        </div>
+        
+        <!-- ===== MODAL BANK SOAL ===== -->
+        <div id="bank-modal" class="modal-backdrop hidden">
+            <div class="modal-content card w-11/12 max-w-3xl">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Bank Soal</h2>
+                <div id="bank-loader" class="hidden mx-auto loader"></div>
+                <div id="bank-content" class="space-y-3"></div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button onclick="closeBankModal()" class="btn btn-secondary">Batal</button>
+                    <button onclick="useSelectedBankQuestions()" class="btn btn-primary">Gunakan Soal Terpilih</button>
+                </div>
             </div>
         </div>
 
@@ -189,7 +209,7 @@
                 </div>
 
                 <div class="card">
-                    <h2 class="text-xl font-bold mb-4">3. Buat Kuis dari Materi</h2>
+                    <h2 class="text-xl font-bold mb-4">3. Buat Kuis</h2>
                     
                     <!-- Tabs for content source -->
                     <div class="border-b border-gray-200">
@@ -198,6 +218,7 @@
                             <button onclick="switchTab('text')" id="tab-btn-text" class="tab-btn">Teks</button>
                             <button onclick="switchTab('web')" id="tab-btn-web" class="tab-btn">URL Web</button>
                             <button onclick="switchTab('youtube')" id="tab-btn-youtube" class="tab-btn">URL YouTube</button>
+                            <button onclick="switchTab('bank')" id="tab-btn-bank" class="tab-btn">Bank Soal</button>
                         </nav>
                     </div>
 
@@ -219,9 +240,13 @@
                             <p class="text-sm text-gray-500 mb-3">Masukkan URL video YouTube. AI akan membuat soal dari judul dan deskripsi video.</p>
                             <input type="url" id="youtube-url-input" class="w-full border-gray-300 rounded-md shadow-sm p-2" placeholder="https://www.youtube.com/watch?v=xxxxxx">
                         </div>
+                        <div id="tab-content-bank" class="hidden">
+                            <p class="text-sm text-gray-500 mb-3">Gunakan soal-soal yang sudah tersimpan di bank soal Anda.</p>
+                            <button onclick="showQuestionBankModal()" class="btn btn-secondary w-full">Buka & Pilih dari Bank Soal</button>
+                        </div>
                     </div>
 
-                    <div class="mt-6">
+                    <div id="ai-generator-options" class="mt-6">
                         <label for="question-count" class="block text-sm font-medium text-gray-700">Jumlah Soal</label>
                         <select id="question-count" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                             <option value="5">5 Soal</option>
@@ -231,9 +256,10 @@
                             <option value="custom">Jumlah Lainnya...</option>
                         </select>
                         <input type="number" id="custom-question-count" class="mt-2 hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Masukkan jumlah soal" min="1" max="50">
+                    
+                        <button id="generate-quiz-btn" onclick="generateQuizFromActiveSource()" class="btn btn-primary w-full mt-4" disabled>Buat Soal dengan AI</button>
                     </div>
 
-                    <button id="generate-quiz-btn" onclick="generateQuizFromActiveSource()" class="btn btn-primary w-full mt-4" disabled>Buat Soal dengan AI</button>
                     <div id="generation-loader" class="hidden mx-auto mt-4 loader"></div>
                     <p id="generation-status" class="text-center text-sm text-gray-500 mt-2"></p>
                 </div>
@@ -242,7 +268,10 @@
                     <h2 class="text-xl font-bold mb-4">4. Tinjau Soal</h2>
                     <p class="text-xs text-gray-500 mb-4">Catatan: Rumus matematika ditampilkan sebagai kode LaTeX di sini. Peserta akan melihatnya dalam format yang benar.</p>
                     <div id="quiz-review-form" class="space-y-4"></div>
-                    <button onclick="saveQuiz()" class="btn btn-primary w-full mt-6">Simpan & Aktifkan Kuis</button>
+                    <div class="flex flex-col sm:flex-row gap-4 mt-6">
+                        <button onclick="saveToBank()" class="btn btn-info w-full">Simpan ke Bank Soal</button>
+                        <button onclick="saveQuiz()" class="btn btn-primary w-full">Aktifkan Kuis</button>
+                    </div>
                 </div>
                 
                 <div id="quiz-active-section" class="card hidden">
@@ -259,7 +288,14 @@
                 <div id="leaderboard-section" class="card hidden">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold">🏆 Leaderboard</h2>
-                        <button onclick="fetchLeaderboard()" class="btn btn-secondary">Refresh</button>
+                        <div class="flex items-center space-x-4">
+                            <button onclick="fetchLeaderboard()" class="btn btn-secondary text-sm px-3 py-1">Refresh</button>
+                            <label for="realtime-toggle" class="toggle-label text-sm">
+                                <input type="checkbox" id="realtime-toggle" class="toggle-checkbox">
+                                <span class="toggle-switch"></span>
+                                <span class="ml-2">Otomatis</span>
+                            </label>
+                        </div>
                     </div>
                     <div id="leaderboard-loader" class="hidden mx-auto loader"></div>
                     <div id="leaderboard-content" class="overflow-x-auto"></div>
@@ -354,10 +390,12 @@
         logoUrl: '',
         themeColor: '#4f46e5',
         quizQuestions: [],
+        questionBank: [],
         quizIsActive: false,
         maxTime: 300, // 5 menit dalam detik (default)
         participantData: {},
         quizTimer: null,
+        leaderboardTimer: null,
         quizSeconds: 0,
         userAnswers: [],
         selectedOption: null,
@@ -390,6 +428,8 @@
     const quizReviewForm = document.getElementById('quiz-review-form');
     const quizActiveSection = document.getElementById('quiz-active-section');
     const leaderboardSection = document.getElementById('leaderboard-section');
+    const realtimeToggle = document.getElementById('realtime-toggle');
+    const aiGeneratorOptions = document.getElementById('ai-generator-options');
     // Branding
     const logoUploadInput = document.getElementById('logo-upload');
     const logoPreview = document.getElementById('logo-preview');
@@ -418,6 +458,9 @@
     const resultCalculationDetails = document.getElementById('result-calculation-details');
     // Modals
     const helpModal = document.getElementById('help-modal');
+    const bankModal = document.getElementById('bank-modal');
+    const bankLoader = document.getElementById('bank-loader');
+    const bankContent = document.getElementById('bank-content');
 
 
     // --- UTILITY & PAGE NAVIGATION ---
@@ -462,11 +505,17 @@
     function showDashboardAndLeaderboard() {
         showAdminDashboard();
         leaderboardSection.classList.remove('hidden');
-        fetchLeaderboard();
+        fetchLeaderboard(); // Fetch once immediately
     }
     
     function hideLeaderboard() {
         leaderboardSection.classList.add('hidden');
+        // Stop real-time updates when hiding
+        if (appState.leaderboardTimer) {
+            clearInterval(appState.leaderboardTimer);
+            appState.leaderboardTimer = null;
+            realtimeToggle.checked = false;
+        }
     }
 
     // --- MODAL FUNCTIONS ---
@@ -552,12 +601,19 @@
     
     function switchTab(tabName) {
         appState.activeTab = tabName;
-        ['file', 'text', 'web', 'youtube'].forEach(name => {
+        ['file', 'text', 'web', 'youtube', 'bank'].forEach(name => {
             document.getElementById(`tab-btn-${name}`).classList.remove('active');
             document.getElementById(`tab-content-${name}`).classList.add('hidden');
         });
         document.getElementById(`tab-btn-${tabName}`).classList.add('active');
         document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+        
+        // Show/hide AI generator options
+        if (tabName === 'bank') {
+            aiGeneratorOptions.classList.add('hidden');
+        } else {
+            aiGeneratorOptions.classList.remove('hidden');
+        }
         validateSource();
     }
 
@@ -851,11 +907,30 @@
         }
     }
     
+    function toggleRealtimeLeaderboard(event) {
+        if (event.target.checked) {
+            // Start interval if it's not already running
+            if (!appState.leaderboardTimer) {
+                fetchLeaderboard(); // Fetch immediately
+                appState.leaderboardTimer = setInterval(fetchLeaderboard, 7000); // Refresh every 7 seconds
+            }
+        } else {
+            // Stop interval
+            if (appState.leaderboardTimer) {
+                clearInterval(appState.leaderboardTimer);
+                appState.leaderboardTimer = null;
+            }
+        }
+    }
+
     async function fetchLeaderboard() {
         const loader = document.getElementById('leaderboard-loader');
         const content = document.getElementById('leaderboard-content');
-        loader.classList.remove('hidden');
-        content.innerHTML = '';
+        
+        // Only show loader on the first fetch when content is empty
+        if (!content.innerHTML) {
+            loader.classList.remove('hidden');
+        }
         
         if (!appState.googleSheetUrl) {
             showAlert("Error", "URL Google Sheet belum dikonfigurasi.");
@@ -892,8 +967,7 @@
                 });
                 
                 tableHTML += `</tbody></table>`;
-                content.innerHTML = tableHTML;
-
+                
                 const formulaHTML = `<div class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-700">
                     <h4 class="font-bold mb-2">Rumus Skor Akhir</h4>
                     <p class="font-mono text-xs bg-gray-200 p-2 rounded">Skor Akhir = (Skor Jawaban * 0.75) + (Skor Waktu * 0.25)</p>
@@ -902,14 +976,21 @@
                         <li><b>Skor Waktu:</b> ((Waktu Maksimal - Waktu Pengerjaan) / Waktu Maksimal) * 100</li>
                     </ul>
                 </div>`;
-                content.innerHTML += formulaHTML;
+                
+                content.innerHTML = tableHTML + formulaHTML;
 
-            } else {
+            } else if (!content.innerHTML) { // Only show if there's no data at all
                 content.innerHTML = `<p class="text-center text-gray-500">Belum ada data peserta yang masuk.</p>`;
             }
 
         } catch (error) {
             console.error("Error fetching leaderboard:", error);
+            // Stop interval on error to prevent spamming
+            if (appState.leaderboardTimer) {
+                clearInterval(appState.leaderboardTimer);
+                appState.leaderboardTimer = null;
+                realtimeToggle.checked = false;
+            }
             showAlert("Error", "Gagal memuat leaderboard. Pastikan Anda sudah melakukan Re-Deploy pada Google Script.");
             content.innerHTML = `<p class="text-center text-red-500">Gagal memuat data.</p>`;
         } finally {
@@ -1346,6 +1427,9 @@ function doPost(e) {
             themeColorPicker.value = e.target.value;
             handleColorChange();
         });
+        
+        // Listener for realtime toggle
+        realtimeToggle.addEventListener('change', toggleRealtimeLeaderboard);
 
 
         // --- URL and Config Handling ---
