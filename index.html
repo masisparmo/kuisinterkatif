@@ -18,16 +18,20 @@
         :root {
             --primary-color: #4f46e5;
             --primary-color-hover: #4338ca;
+            --secondary-color: #6b7280;
+            --secondary-color-hover: #4b5563;
+            --info-color: #3b82f6;
+            --info-color-hover: #2563eb;
         }
         body { font-family: 'Inter', sans-serif; }
         .card { background-color: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); transition: all 0.3s ease-in-out; }
         .btn { display: inline-block; text-align: center; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; color: white; transition: background-color 0.2s; cursor: pointer; border: none; }
         .btn-primary { background-color: var(--primary-color); }
         .btn-primary:hover { background-color: var(--primary-color-hover); }
-        .btn-secondary { background-color: #6b7280; }
-        .btn-secondary:hover { background-color: #4b5563; }
-        .btn-info { background-color: #3b82f6; }
-        .btn-info:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: var(--secondary-color-hover); }
+        .btn-info { background-color: var(--info-color); }
+        .btn-info:hover { background-color: var(--info-color-hover); }
         .btn:disabled { background-color: #d1d5db; cursor: not-allowed; }
         .quiz-option { border: 1px solid #e5e7eb; cursor: pointer; }
         .quiz-option:hover { background-color: #f3f4f6; border-color: var(--primary-color); }
@@ -222,7 +226,7 @@
                             <button onclick="switchTab('text')" id="tab-btn-text" class="tab-btn">Teks</button>
                             <button onclick="switchTab('web')" id="tab-btn-web" class="tab-btn">URL Web</button>
                             <button onclick="switchTab('youtube')" id="tab-btn-youtube" class="tab-btn">URL YouTube</button>
-                            <button onclick="switchTab('bank')" id="tab-btn-bank" class="tab-btn">Bank Soal</button>
+                            <button onclick="switchTab('bank')" id="tab-btn-bank" class="tab-btn">Data Lama</button>
                         </nav>
                     </div>
 
@@ -245,8 +249,11 @@
                             <input type="url" id="youtube-url-input" class="w-full border-gray-300 rounded-md shadow-sm p-2" placeholder="https://www.youtube.com/watch?v=xxxxxx">
                         </div>
                         <div id="tab-content-bank" class="hidden">
-                            <p class="text-sm text-gray-500 mb-3">Gunakan soal-soal yang sudah tersimpan di bank soal Anda.</p>
-                            <button onclick="showQuestionBankModal()" class="btn btn-secondary w-full">Buka & Pilih dari Bank Soal</button>
+                            <p class="text-sm text-gray-500 mb-3">Gunakan soal dari Draft Kuis terakhir atau dari Bank Soal (semua kuis sebelumnya).</p>
+                            <div class="flex flex-col sm:flex-row gap-4 mt-2">
+                                <button onclick="loadDraft()" class="btn btn-info w-full">Muat Draft Kuis</button>
+                                <button onclick="showQuestionBankModal()" class="btn btn-secondary w-full">Buka Bank Soal</button>
+                            </div>
                         </div>
                     </div>
 
@@ -269,7 +276,7 @@
                 </div>
 
                 <div id="quiz-review-section" class="card hidden">
-                    <h2 class="text-xl font-bold mb-4">4. Tinjau Soal</h2>
+                    <h2 class="text-xl font-bold mb-4">4. Tinjau & Aktifkan Kuis</h2>
                     <p class="text-xs text-gray-500 mb-4">Catatan: Rumus matematika ditampilkan sebagai kode LaTeX di sini. Peserta akan melihatnya dalam format yang benar.</p>
                     <div id="quiz-review-form" class="space-y-4"></div>
                     <div id="progress-container" class="mt-4 hidden">
@@ -278,8 +285,9 @@
                             <div class="progress-bar" style="width: 100%;"></div>
                         </div>
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-4 mt-6">
-                        <button id="save-to-bank-btn" onclick="saveToBank()" class="btn btn-info w-full">Simpan ke Bank Soal</button>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                        <button id="save-to-bank-btn" onclick="saveToBank()" class="btn btn-secondary w-full">Simpan ke Bank Soal</button>
+                        <button id="save-draft-btn" onclick="saveDraft()" class="btn btn-info w-full">Simpan Draft</button>
                         <button id="activate-quiz-btn" onclick="saveQuiz()" class="btn btn-primary w-full">Aktifkan Kuis</button>
                     </div>
                 </div>
@@ -445,6 +453,7 @@
     const progressContainer = document.getElementById('progress-container');
     const progressText = document.getElementById('progress-text');
     const saveToBankBtn = document.getElementById('save-to-bank-btn');
+    const saveDraftBtn = document.getElementById('save-draft-btn');
     const activateQuizBtn = document.getElementById('activate-quiz-btn');
     // Branding
     const logoUploadInput = document.getElementById('logo-upload');
@@ -827,7 +836,7 @@
         if (!apiKey) {
              throw new Error("Kunci API Gemini tidak tersedia. Harap konfigurasikan di halaman admin.");
         }
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{
@@ -918,17 +927,18 @@
         progressText.textContent = message;
         progressContainer.classList.remove('hidden');
         saveToBankBtn.disabled = true;
+        saveDraftBtn.disabled = true;
         activateQuizBtn.disabled = true;
     }
 
     function hideProgress() {
         progressContainer.classList.add('hidden');
         saveToBankBtn.disabled = false;
+        saveDraftBtn.disabled = false;
         activateQuizBtn.disabled = false;
     }
 
-    async function saveQuiz() {
-        showProgress("Mengaktifkan kuis...");
+    function getReviewedQuestions() {
         const updatedQuestions = [];
         document.querySelectorAll('#quiz-review-form > div').forEach((div, index) => {
             const question = div.querySelector('input[data-type="question"]').value;
@@ -936,7 +946,12 @@
             const answer = div.querySelector('select[data-type="answer"]').value;
             updatedQuestions.push({ question, options, answer });
         });
-        appState.quizQuestions = updatedQuestions;
+        return updatedQuestions;
+    }
+
+    async function saveQuiz() {
+        showProgress("Mengaktifkan kuis...");
+        appState.quizQuestions = getReviewedQuestions();
         
         try {
             await fetch(appState.googleSheetUrl, {
@@ -968,11 +983,11 @@
                 updateLinkAndQRCode(shortLink);
             }
 
-            showAlert("Sukses!", "Kuis telah dikirim ke server untuk diaktifkan.");
+            showAlert("Sukses!", "Kuis telah diaktifkan.");
 
         } catch (error) {
             console.error("Failed to save quiz:", error);
-            showAlert("Error", "Gagal mengirim permintaan simpan kuis. Periksa koneksi Anda.");
+            showAlert("Error", "Gagal mengaktifkan kuis. Periksa koneksi Anda.");
         } finally {
             hideProgress();
         }
@@ -980,13 +995,7 @@
     
     async function saveToBank() {
         showProgress("Menyimpan ke Bank Soal...");
-        const questionsToSave = [];
-        document.querySelectorAll('#quiz-review-form > div').forEach((div, index) => {
-            const question = div.querySelector('input[data-type="question"]').value;
-            const options = Array.from(div.querySelectorAll('input[data-opt-index]')).map(inp => inp.value);
-            const answer = div.querySelector('select[data-type="answer"]').value;
-            questionsToSave.push({ question, options, answer });
-        });
+        const questionsToSave = getReviewedQuestions();
 
         if (questionsToSave.length === 0) {
             showAlert("Tidak Ada Soal", "Tidak ada soal untuk disimpan.");
@@ -1007,6 +1016,59 @@
             showAlert("Error", "Gagal menyimpan soal ke Bank Soal. Periksa koneksi Anda.");
         } finally {
             hideProgress();
+        }
+    }
+
+    async function saveDraft() {
+        showProgress("Menyimpan Draft Kuis...");
+        const questionsToSave = getReviewedQuestions();
+
+        if (questionsToSave.length === 0) {
+            showAlert("Tidak Ada Soal", "Tidak ada soal untuk disimpan sebagai draft.");
+            hideProgress();
+            return;
+        }
+
+        try {
+            await fetch(appState.googleSheetUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'saveDraft', questions: questionsToSave })
+            });
+            showAlert("Sukses!", "Draft kuis berhasil disimpan.");
+        } catch (error) {
+            console.error("Failed to save draft:", error);
+            showAlert("Error", "Gagal menyimpan draft. Periksa koneksi Anda.");
+        } finally {
+            hideProgress();
+        }
+    }
+
+    async function loadDraft() {
+        generationLoader.classList.remove('hidden');
+        generationStatus.textContent = 'Memuat draft kuis terakhir...';
+        
+        try {
+            const urlWithCacheBuster = `${appState.googleSheetUrl}?action=getDraft&v=${new Date().getTime()}`;
+            const response = await fetch(urlWithCacheBuster);
+            if (!response.ok) throw new Error("Gagal menghubungi server untuk memuat draft.");
+            
+            const data = await response.json();
+            if (data.success && data.questions.length > 0) {
+                appState.quizQuestions = data.questions;
+                displayQuizForReview();
+                generationStatus.textContent = "Draft berhasil dimuat! Silakan tinjau di bawah.";
+            } else {
+                showAlert("Info", "Tidak ada draft kuis yang tersimpan.");
+                generationStatus.textContent = "";
+            }
+        } catch (error) {
+            console.error("Failed to load draft:", error);
+            showAlert("Error", "Gagal memuat draft: " + error.message);
+            generationStatus.textContent = "Terjadi kesalahan.";
+        } finally {
+            generationLoader.classList.add('hidden');
         }
     }
 
@@ -1470,6 +1532,7 @@
     const googleAppsScriptCode = `
 const SHEET_NAME_RESULTS = "Hasil Kuis";
 const SHEET_NAME_BANK = "Bank Soal";
+const SHEET_NAME_DRAFT = "Draft Kuis"; // New sheet for drafts
 const SCRIPT_PROP = PropertiesService.getScriptProperties();
 
 function doGet(e) {
@@ -1515,9 +1578,10 @@ function doGet(e) {
     }
   }
 
-  if (action == 'getQuestionBank') {
+  if (action == 'getQuestionBank' || action == 'getDraft') {
     try {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME_BANK);
+      const sheetName = (action == 'getDraft') ? SHEET_NAME_DRAFT : SHEET_NAME_BANK;
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
       if (!sheet || sheet.getLastRow() < 2) {
         return ContentService.createTextOutput(JSON.stringify({ success: true, questions: [] })).setMimeType(ContentService.MimeType.JSON);
       }
@@ -1597,9 +1661,16 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    if (data.action === 'saveToBank') {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME_BANK) || SpreadsheetApp.getActiveSpreadsheet().insertSheet(SHEET_NAME_BANK);
+    if (data.action === 'saveToBank' || data.action === 'saveDraft') {
+      const sheetName = (data.action === 'saveDraft') ? SHEET_NAME_DRAFT : SHEET_NAME_BANK;
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName) || SpreadsheetApp.getActiveSpreadsheet().insertSheet(sheetName);
       const headers = ["Pertanyaan", "Opsi Jawaban (JSON)", "Jawaban Benar"];
+      
+      // If saving a draft, clear the old one first.
+      if (data.action === 'saveDraft' && sheet.getLastRow() > 0) {
+        sheet.clear();
+      }
+
       if (sheet.getLastRow() === 0) {
         sheet.appendRow(headers);
       }
@@ -1612,7 +1683,7 @@ function doPost(e) {
         ]);
       });
       
-      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Saved to bank" })).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Saved successfully" })).setMimeType(ContentService.MimeType.JSON);
     }
     
     throw new Error("Invalid action specified in doPost");
